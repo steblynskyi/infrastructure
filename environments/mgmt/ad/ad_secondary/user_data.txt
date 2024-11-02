@@ -1,0 +1,12 @@
+<powershell>
+# Set EST Time
+Tzutil /s "Eastern Standard Time"
+
+# Install SSM Agent Latest Version
+Invoke-WebRequest `
+	https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe `
+	-OutFile $env:USERPROFILE\Downloads\SSMAgent_latest.exe
+Start-Process `
+	-FilePath $env:USERPROFILE\Downloads\SSMAgent_latest.exe `
+	-ArgumentList "/S"
+</powershell>
