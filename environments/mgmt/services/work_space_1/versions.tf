@@ -5,7 +5,7 @@ terraform {
 
   backend "s3" {
     bucket  = "steblynskyi-infra"
-    key     = "terraform/mgmt/services/jenkins_master.tfstate"
+    key     = "terraform/mgmt/services/work_space_1.tfstate"
     region  = "us-east-1"
     profile = "taras"
   }
