@@ -1,0 +1,11 @@
+{
+  "ApplicationId": {
+    "S": "pms.housekeeping.event.handler.reservationcheckedin"
+  },
+  "Entitlements": {
+    "S": "{\"gs\":[\"gs.an\",\"gs.al\"]}"
+  },
+  "Id": {
+    "S": "pms.housekeeping.event.handler.reservationcheckedin"
+  }
+}

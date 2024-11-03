@@ -1,0 +1,11 @@
+{
+  "ApplicationId": {
+    "S": "pms.housekeeping.event.handler.propertynightaudit"
+  },
+  "Entitlements": {
+    "S": "{\"gs\":[\"gs.an\",\"gs.al\",\"gs.aa\",\"gs.ab\",\"gs.ac\",\"gs.ad\"]}"
+  },
+  "Id": {
+    "S": "pms.housekeeping.event.handler.propertynightaudit"
+  }
+}
