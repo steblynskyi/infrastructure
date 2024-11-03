@@ -41,13 +41,13 @@ data:
   extraconfig-from-values.hcl: |-
     disable_mlock = true
     ui = true
-    
+
     listener "tcp" {
       tls_disable = 1
       address = "[::]:8200"
       cluster_address = "[::]:8201"
     }
-    
+
     storage "raft" {
       path = "/vault/data"
       autopilot {
@@ -57,13 +57,12 @@ data:
         max_trailing_logs = 250
         server_stabilization_time = "10s"
       }
-    
     }
-    
+
     seal "awskms" {
       region = "us-east-1"
     }
-    
+
     service_registration "kubernetes" {}
 ---
 # Source: vault/templates/server-clusterrolebinding.yaml
@@ -277,7 +276,7 @@ spec:
           command:
           - "/bin/sh"
           - "-ec"
-          args: 
+          args:
           - |
             cp /vault/config/extraconfig-from-values.hcl /tmp/storageconfig.hcl;
             [ -n "${HOST_IP}" ] && sed -Ei "s|HOST_IP|${HOST_IP?}|g" /tmp/storageconfig.hcl;
@@ -411,10 +410,10 @@ metadata:
     kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/target-type: instance
     alb.ingress.kubernetes.io/scheme: internal
-    alb.ingress.kubernetes.io/tags: Environment=US-Access,Name=Vault-Internal
-    alb.ingress.kubernetes.io/subnets: subnet-06a79e7f4bca73afe,subnet-0f9dbb37bc08076e5,subnet-0c3889e221d20bf19
-    alb.ingress.kubernetes.io/security-groups: sg-046a43d2fcc58251f
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:960031658638:certificate/de8198f7-e41b-466b-96e1-72607ae111d8
+    alb.ingress.kubernetes.io/tags: Environment=Mgmt,Name=Vault-Internal
+    alb.ingress.kubernetes.io/subnets: subnet-1,subnet-2,subnet-3
+    alb.ingress.kubernetes.io/security-groups: sg-123
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-555-666
     alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80,"HTTPS":443}]'
     alb.ingress.kubernetes.io/load-balancer-attributes: deletion_protection.enabled=true,routing.http2.enabled=true,idle_timeout.timeout_seconds=2000
