@@ -1,0 +1,33 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "sns:GetTopicAttributes",
+                "sns:CreateTopic",
+                "sns:Publish",
+                "sns:Subscribe"
+            ],
+            "Resource": [
+               "arn:aws:sns:us-east-1:123:Create-Folio-DEV",
+               "arn:aws:sns:us-east-1:123:MT-FolioUpdatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountUpdatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationUpdatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationCreatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-RoomClassCreatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-RoomClassUpdatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-RoomClassDeletedEvent-DEV.fifo"
+            ]
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "sns:ListTopics"
+            ],
+            "Resource": "arn:aws:sns:us-east-1:123:*"
+        }
+    ]
+}

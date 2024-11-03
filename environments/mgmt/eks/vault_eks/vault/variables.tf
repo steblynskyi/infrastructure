@@ -5,7 +5,7 @@ variable "region" {
 
 variable "aws_profile" {
   description = "AWS Profile name on local machine for multi aws account use"
-  default     = "dev"
+  default     = "taras"
 }
 
 variable "system_path" {

@@ -1,0 +1,36 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "sns:GetTopicAttributes",
+                "sns:CreateTopic",
+                "sns:Publish",
+                "sns:Subscribe"
+            ],
+            "Resource": [
+                "arn:aws:sns:us-east-1:123:MT-ReservationCheckedInEvent-DEV.fifo",
+                "arn:aws:sns:us-east-1:123:MT-ReservationCheckedOutEvent-DEV.fifo",
+                "arn:aws:sns:us-east-1:123:MT-ReservationUpdatedEvent-DEV.fifo",
+                "arn:aws:sns:us-east-1:123:MT-ReservationCreatedEvent-DEV.fifo",
+                "arn:aws:sns:us-east-1:123:MT-ReservationDeletedEvent-DEV.fifo",
+                "arn:aws:sns:us-east-1:123:MT-ReservationQuoteCreatedEvent-DEV.fifo",
+                "arn:aws:sns:us-east-1:123:MT-ReservationNoShowEvent-DEV.fifo",
+                "arn:aws:sns:us-east-1:123:MT-ReservationCanceledEvent-DEV.fifo",
+                "arn:aws:sns:us-east-1:123:MT-ReservationSplitEvent-DEV.fifo",
+                "arn:aws:sns:us-east-1:123:MT-AccountDeletedEvent-DEV.fifo",
+                "arn:aws:sns:us-east-1:123:MT-AccountCreatedEvent-DEV.fifo"
+            ]
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "sns:ListTopics"
+            ],
+            "Resource": "arn:aws:sns:us-east-1:123:*"
+        }
+    ]
+}

@@ -1,0 +1,43 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "SnsAccess",
+            "Effect": "Allow",
+            "Action": [
+                "sns:GetTopicAttributes",
+                "sns:CreateTopic",
+                "sns:Publish",
+                "sns:Subscribe"
+            ],
+            "Resource": [
+               "arn:aws:sns:us-east-1:123:MT-ReservationUpdatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationDeletedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationCreatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationCheckedOutEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationCheckedInEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-GroupPickUpEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-GroupBlockUpdateEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-GroupBlockCreateEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-FolioUpdatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-FolioCreatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountCreatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountUpdatedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountDistributionEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountStatementEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationNoShowEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationCanceledEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountDeletedEvent-DEV.fifo",
+               "arn:aws:sns:us-east-1:123:MT-FolioInternalEvent-DEV.fifo"
+            ]
+        },
+        {
+            "Sid": "SnsListAccess",
+            "Effect": "Allow",
+            "Action": [
+                "sns:ListTopics"
+            ],
+            "Resource": "arn:aws:sns:us-east-1:123:*"
+        }
+    ]
+}

@@ -38,7 +38,7 @@ resource "aws_kms_key" "vault-key" {
             "Sid": "Enable IAM User Permissions",
             "Effect": "Allow",
             "Principal": {
-                "AWS": "arn:aws:iam::960031658638:root"
+                "AWS": "arn:aws:iam::123:root"
             },
             "Action": "kms:*",
             "Resource": "*"
@@ -47,12 +47,12 @@ resource "aws_kms_key" "vault-key" {
             "Sid": "Allow use of the key",
             "Effect": "Allow",
             "Principal": {
-                "AWS": "arn:aws:iam::960031658638:user/vault-user-us-access"
+                "AWS": "arn:aws:iam::123:user/vault-user-us-access"
             },
             "Action": [
                 "kms:*"
             ],
-            "Resource": "arn:aws:kms:us-east-1:960031658638:key/*"
+            "Resource": "arn:aws:kms:us-east-1:123:key/*"
         }
     ]
 }

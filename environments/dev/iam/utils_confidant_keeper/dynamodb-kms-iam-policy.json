@@ -1,0 +1,51 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:*"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:123:table/confidant-keeper-dev",
+                "arn:aws:dynamodb:us-east-1:123:table/confidant-keeper-dev/*"
+            ]
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Deny",
+            "Action": [
+                "dynamodb:DeleteTable"
+            ],
+            "Resource": [
+                "arn:aws:dynamodb:us-east-1:123:table/confidant-keeper-dev"
+            ]
+        },
+        {
+            "Sid": "VisualEditor2",
+            "Effect": "Allow",
+            "Action": [
+                "kms:GenerateRandom",
+                "kms:Decrypt",
+                "kms:GenerateDataKey*",
+                "kms:ReEncrypt*",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ListGrants",
+                "kms:CreateGrant",
+                "kms:RevokeGrant"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "VisualEditor3",
+            "Effect": "Allow",
+            "Action": [
+                "iam:ListRoles",
+                "iam:GetRole"
+            ],
+            "Resource": "*"
+        }
+    ]
+}

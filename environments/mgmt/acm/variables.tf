@@ -20,7 +20,7 @@ variable "environment" {
 
 # VPC ID for the EKS cluster
 variable "vpc_id" {
-  description = "The VPC ID for the EKS cluster"
+  description = "Mgmt-VPC"
   type        = string
   default     = "vpc-123"
 }
