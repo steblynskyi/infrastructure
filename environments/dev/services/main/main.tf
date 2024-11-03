@@ -19,7 +19,7 @@ resource "aws_launch_configuration" "launch_cfg" {
     templatefile("user_data.txt", {
       directoryId   = "d-123"
       directoryName = "steblynskyi.local"
-      directoryOU   = "OU=InnCenterNG,OU=${var.OU},OU=Servers - AWS,DC=steblynskyi,DC=local"
+      directoryOU   = "OU=Main,OU=${var.OU},OU=Servers - AWS,DC=steblynskyi,DC=local"
     })
   )
 
