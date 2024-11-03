@@ -1,0 +1,56 @@
+{
+    "Version": "2012-10-17",
+    "Id": "key-consolepolicy-3",
+    "Statement": [
+        {
+            "Sid": "Enable IAM User Permissions",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::123:root"
+            },
+            "Action": "kms:*",
+            "Resource": "*"
+        },
+        {
+            "Sid": "Allow access for Key Administrators",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::123:user/taras"
+            },
+            "Action": [
+                "kms:Describe*",
+                "kms:List*",
+                "kms:Create*",
+                "kms:Revoke*",
+                "kms:Enable*",
+                "kms:Get*",
+                "kms:Disable*",
+                "kms:Delete*",
+                "kms:Put*",
+                "kms:Update*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "Allow use of the key",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::123:user/utils-confidant-keeper-dev"
+                ]
+            },
+            "Action": [
+                "kms:GenerateRandom",
+                "kms:Decrypt",
+                "kms:GenerateDataKey*",
+                "kms:ReEncrypt*",
+                "kms:DescribeKey",
+                "kms:Encrypt",
+                "kms:ListGrants",
+                "kms:CreateGrant",
+                "kms:RevokeGrant"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
