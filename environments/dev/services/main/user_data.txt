@@ -1,0 +1,63 @@
+<powershell>
+# Set EST Time
+Tzutil /s "Eastern Standard Time"
+
+# Set environment variables "as temporary solution"
+[System.Environment]::SetEnvironmentVariable('SmtpUsername','AKIA57BSYSKHKCGRDLOU',[System.EnvironmentVariableTarget]::Machine)
+[System.Environment]::SetEnvironmentVariable('SmtpPassword','BCA/4jBaTFi4jBw+2IaGtC0VlMDrgfV3jw18v/KeuMIT',[System.EnvironmentVariableTarget]::Machine)
+
+# Install CodeDeploy Agent Latest Version
+Set-ExecutionPolicy RemoteSigned -Force
+Import-Module AWSPowerShell
+$REGION = (ConvertFrom-Json (Invoke-WebRequest -Uri http://169.254.169.254/latest/dynamic/instance-identity/document -UseBasicParsing).Content).region
+New-Item -Path c:\temp -ItemType "directory" -Force
+powershell.exe -Command Read-S3Object -BucketName aws-codedeploy-$REGION -Key latest/codedeploy-agent-updater.msi -File c:\temp\codedeploy-agent-updater.msi
+c:\temp\codedeploy-agent-updater.msi /quiet /l c:\temp\host-agent-updater-log.txt
+
+# Install SSM Agent Latest Version
+Invoke-WebRequest `
+	https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe `
+	-OutFile $env:USERPROFILE\Downloads\SSMAgent_latest.exe
+Start-Process `
+	-FilePath $env:USERPROFILE\Downloads\SSMAgent_latest.exe `
+	-ArgumentList "/S"
+
+# Download steblynskyiServices from S3 Bucket
+aws s3 cp s3://steblynskyi-service-bucket/DEV/steblynskyi.Services/ C:\steblynskyi.Services\ --recursive
+
+# Install steblynskyiServices
+cd C:\Windows\Microsoft.NET\Framework\v4.0.30319
+.\installutil.exe -i "C:\steblynskyi.Services\Pms.Scheduling\steblynskyiSchedulerService.exe"
+.\installutil.exe -i "C:\steblynskyi.Services\PMS.Reporting\ReportingServiceHost.exe"
+.\installutil.exe -i "C:\steblynskyi.Services\steblynskyi.MessageMonitor\steblynskyiMessageMonitor.exe"
+
+# Add additional HDD
+$NewDiskNumber = 1
+$NewDiskLabel="Data"
+
+$diskpart_command = $Null
+$diskpart_command = @"
+SELECT DISK $NewDiskNumber
+ATTRIBUTES DISK CLEAR READONLY
+ONLINE DISK
+create partition primary
+list partition
+select partition 1
+format fs=NTFS quick
+assign letter=D
+"@
+$diskpart_command | diskpart
+
+Start-Sleep -s 150
+
+# Join Instance to Domain Controller
+Set-DefaultAWSRegion -Region us-east-1
+Set-Variable -name instance_id -value (Invoke-Restmethod -uri http://169.254.169.254/latest/meta-data/instance-id)
+$Params = @{"directoryId"="${directoryId}";"directoryName"="${directoryName}";"directoryOU"="${directoryOU}"}
+New-SSMAssociation -InstanceId $instance_id -Name "steblynskyi-ad-join" -Parameter $Params
+
+# Sleep State for CodeDeploy to Deploy Application
+Start-Sleep -s 360
+
+Restart-Computer -force
+</powershell>
