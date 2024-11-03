@@ -1,0 +1,9 @@
+# HashiCorp vault helm chart values for HA vault cluster
+global:
+  enabled: true
+  tlsDisable: true
+injector:
+  enabled: true
+  externalVaultAddr: https://vault.mgmt-steblynskyi.com
+server:
+  enabled: false

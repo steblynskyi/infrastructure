@@ -1,0 +1,74 @@
+# HashiCorp vault helm chart values for HA vault cluster
+global:
+  enabled: true
+  tlsDisable: true
+injector:
+  enabled: false
+server:
+  affinity: ""
+  service:
+    type: NodePort
+  ingress:
+    enabled: true
+    hosts:
+      - host: vault2.usinnroad.com
+  ha:
+    enabled: true
+    replicas: 5
+    raft:
+      enabled: true
+      setNodeID: true
+      config: |
+        ui = true
+  
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+  
+        storage "raft" {
+          path = "/vault/data"
+          autopilot {
+            cleanup_dead_servers = "true"
+            last_contact_threshold = "200ms"
+            last_contact_failure_threshold = "10m"
+            max_trailing_logs = 250
+            min_quorum = 5
+            server_stabilization_time = "10s"
+          }
+
+        }
+  
+        seal "awskms" {
+          region = "us-east-1"
+        }
+  
+        service_registration "kubernetes" {}
+  extraSecretEnvironmentVars:
+    - envName: AWS_ACCESS_KEY_ID
+      secretName: aws-secret-access-key
+      secretKey: AWS_ACCESS_KEY_ID
+    - envName: AWS_SECRET_ACCESS_KEY
+      secretName: aws-secret-access-key
+      secretKey: AWS_SECRET_ACCESS_KEY
+    - envName: VAULT_AWSKMS_SEAL_KEY_ID
+      secretName: aws-kms-key-id
+      secretKey: KMS_KEY_ID
+  dataStorage:
+    enabled: true
+    size: 60Gi
+    accessModes: ReadWriteOnce
+    mountPath: "/vault/data"
+    annotations: {}
+  auditStorage:
+    enabled: true
+    size: 60Gi
+    accessModes: ReadWriteOnce
+    mountPath: "/vault/audit"
+    annotations: {}
+  ui:
+    enabled: true
+    serviceType: LoadBalancer
+    activeVaultPodOnly: true
+
