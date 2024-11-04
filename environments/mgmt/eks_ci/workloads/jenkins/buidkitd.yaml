@@ -13,7 +13,7 @@ spec:
     app: buildkitd
 ---
 apiVersion: apps/v1
-kind: DaemonSet
+kind: DaemonSet 
 metadata:
   name: buildkitd
   namespace: jenkins
