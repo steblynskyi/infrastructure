@@ -1,5 +1,5 @@
 module "taras_iam" {
-  source = "../../../modules/taras/iam"
+  source = "../../../../modules/taras/iam"
 
   username    = var.username
   system_path = var.system_path
