@@ -4,11 +4,13 @@ resource "aws_sns_topic" "Pms-Housekeeping-Room-Import" {
   display_name = "Pms-Housekeeping-Room-Import-DEV"
 }
 
+
 # SNS Topic Housekeeping-Room-Condition-Updated
 resource "aws_sns_topic" "Pms-Housekeeping-Room-Condition-Updated" {
   name         = "Pms-Housekeeping-Room-Condition-Updated-DEV"
   display_name = "Pms-Housekeeping-Room-Condition-Updated-DEV"
 }
+
 
 # SNS Topic Task-New-Created
 resource "aws_sns_topic" "Pms-Task-New-Created" {
@@ -16,11 +18,13 @@ resource "aws_sns_topic" "Pms-Task-New-Created" {
   display_name = "Pms-Task-New-Created-DEV"
 }
 
+
 # SNS Topic Task-Notes-Import
 resource "aws_sns_topic" "Pms-Task-Notes-Import" {
   name         = "Pms-Task-Notes-Import-DEV"
   display_name = "Pms-Task-Notes-Import-DEV"
 }
+
 
 # SNS Topic Task-Property-Import-Publisher
 resource "aws_sns_topic" "Pms-Task-Property-Import-Publisher" {
@@ -28,11 +32,13 @@ resource "aws_sns_topic" "Pms-Task-Property-Import-Publisher" {
   display_name = "Pms-Task-Property-Import-Publisher-DEV"
 }
 
+
 # SNS Topic Task-Roles-Import
 resource "aws_sns_topic" "Pms-Task-Roles-Import" {
   name         = "Pms-Task-Roles-Import-DEV"
   display_name = "Pms-Task-Roles-Import-DEV"
 }
+
 
 # SNS Topic Task-Staff-Import
 resource "aws_sns_topic" "Pms-Task-Staff-Import" {
@@ -40,11 +46,13 @@ resource "aws_sns_topic" "Pms-Task-Staff-Import" {
   display_name = "Pms-Task-Staff-Import-DEV"
 }
 
+
 # SNS Topic Task-Assigned
 resource "aws_sns_topic" "Pms-Task-Assigned" {
   name         = "Pms-Task-Assigned-DEV"
   display_name = "Pms-Task-Assigned-DEV"
 }
+
 
 # SNS Topic Task-Deleted
 resource "aws_sns_topic" "Pms-Task-Deleted" {
@@ -52,11 +60,13 @@ resource "aws_sns_topic" "Pms-Task-Deleted" {
   display_name = "Pms-Task-Deleted-DEV"
 }
 
+
 # SNS Topic Task-Details-Updated
 resource "aws_sns_topic" "Pms-Task-Details-Updated" {
   name         = "Pms-Task-Details-Updated-DEV"
   display_name = "Pms-Task-Details-Updated-DEV"
 }
+
 
 # SNS Topic Task-Remark-Added
 resource "aws_sns_topic" "Pms-Task-Remark-Added" {
@@ -64,11 +74,13 @@ resource "aws_sns_topic" "Pms-Task-Remark-Added" {
   display_name = "Pms-Task-Remark-Added-DEV"
 }
 
+
 # SNS Topic Task-Status-Updated
 resource "aws_sns_topic" "Pms-Task-Status-Updated" {
   name         = "Pms-Task-Status-Updated-DEV"
   display_name = "Pms-Task-Status-Updated-DEV"
 }
+
 
 # SNS Topic Task-Unassigned
 resource "aws_sns_topic" "Pms-Task-Unassigned" {
@@ -76,11 +88,13 @@ resource "aws_sns_topic" "Pms-Task-Unassigned" {
   display_name = "Pms-Task-Unassigned-DEV"
 }
 
+
 # SNS Topic Task-Update-Room-Condition
 resource "aws_sns_topic" "Pms-Task-Update-Room-Condition" {
   name         = "Pms-Task-Update-Room-Condition-DEV"
   display_name = "Pms-Task-Update-Room-Condition-DEV"
 }
+
 
 # SNS Topic Email-Innsights
 resource "aws_sns_topic" "Email-Innsights" {
@@ -96,11 +110,13 @@ resource "aws_sns_topic_subscription" "Email-Innsights" {
   endpoint                        = "https://pms-innsights-web-api.dev-steblynskyi.com/innsights/api/sns/RaiseEmailEvent"
 }
 
+
 # SNS Topic Task-Importrole-Handler
 resource "aws_sns_topic" "Pms-Task-Importrole-Handler" {
   name         = "Pms-Task-Importrole-Handler-DEV"
   display_name = "Pms-Task-Importrole-Handler-DEV"
 }
+
 
 # SNS Topic Email-API
 resource "aws_sns_topic" "Email-API" {
@@ -116,6 +132,7 @@ resource "aws_sns_topic_subscription" "Email-API" {
   endpoint                        = "https://pms-email-api.dev-steblynskyi.com/api/AwsSesNotifications/notify"
 }
 
+
 # SNS Topic integrations-email-api
 resource "aws_sns_topic" "Integrations-Email-API-SesDeliveryNotifications" {
   name         = "Integrations-Email-API-SesDeliveryNotifications-DEV"
@@ -127,6 +144,7 @@ resource "aws_sns_topic_subscription" "Integrations-Email-API-SesDeliveryNotific
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:Integrations-Email-API-SesDeliveryNotifications-DEV"
 }
+
 
 # SNS Topic WebHooks-ReservationCreated
 resource "aws_sns_topic" "WebHooks-ReservationCreated" {
@@ -145,7 +163,6 @@ resource "aws_sns_topic_subscription" "WebHooks-ReservationCreated-Task-Reservat
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:Task-Reservation-Updated-DEV"
 }
-
 
 resource "aws_sns_topic_subscription" "WebHooks-ReservationCreated-WebHooks-ReservationsQueue" {
   topic_arn = aws_sns_topic.WebHooks-ReservationCreated.arn
@@ -177,7 +194,6 @@ resource "aws_sns_topic_subscription" "WebHooks-ReservationUpdated-Task-Reservat
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:Task-Reservation-Updated-DEV"
 }
-
 
 resource "aws_sns_topic_subscription" "WebHooks-ReservationUpdated-Akia-ReservationsQueue" {
   topic_arn = aws_sns_topic.WebHooks-ReservationUpdated.arn
@@ -224,6 +240,7 @@ resource "aws_sns_topic_subscription" "WebHooks-RoomMaintenanceCreate" {
   endpoint  = "arn:aws:sqs:us-east-1:123:InnSights-WebHookQueue-DEV"
 }
 
+
 # SNS Topic WebHooks-RoomMaintenanceUpdate
 resource "aws_sns_topic" "WebHooks-RoomMaintenanceUpdate" {
   name         = "WebHooks-RoomMaintenanceUpdate-DEV"
@@ -235,6 +252,7 @@ resource "aws_sns_topic_subscription" "WebHooks-RoomMaintenanceUpdate" {
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:InnSights-WebHookQueue-DEV"
 }
+
 
 # SNS Topic WebHooks ReservationCheckedIn
 resource "aws_sns_topic" "WebHooks-ReservationCheckedIn" {
@@ -288,6 +306,7 @@ resource "aws_sns_topic_subscription" "WebHooks-ReservationParkingLotUpdated" {
   endpoint  = "arn:aws:sqs:us-east-1:123:Task-Reservation-Updated-DEV"
 }
 
+
 # SNS Topic WebHooks ReservationQuoteCreated
 resource "aws_sns_topic" "WebHooks-ReservationQuoteCreated" {
   name         = "WebHooks-ReservationQuoteCreated-DEV"
@@ -299,6 +318,7 @@ resource "aws_sns_topic_subscription" "WebHooks-ReservationQuoteCreated" {
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:Task-Reservation-Updated-DEV"
 }
+
 
 # SNS Topic WebHooks WebHooks-FolioCreated
 resource "aws_sns_topic" "WebHooks-FolioCreated" {
@@ -327,7 +347,6 @@ resource "aws_sns_topic" "WebHooks-ReservationDeleted" {
   display_name = "WebHooks-ReservationDeleted-DEV"
 }
 
-
 resource "aws_sns_topic_subscription" "WebHooks-ReservationDeleted-Task-Reservation-Updated-DEV" {
   topic_arn = aws_sns_topic.WebHooks-ReservationDeleted.arn
   protocol  = "sqs"
@@ -353,6 +372,7 @@ resource "aws_sns_topic_subscription" "WebHooks-RatePlanCreated" {
   endpoint  = "arn:aws:sqs:us-east-1:123:WebHooks-RatePlanQueue-DEV"
 }
 
+
 # SNS Topic WebHooks WebHooks-RatePlanUpdated
 resource "aws_sns_topic" "WebHooks-RatePlanUpdated" {
   name         = "WebHooks-RatePlanUpdated-DEV"
@@ -364,6 +384,7 @@ resource "aws_sns_topic_subscription" "WebHooks-RatePlanUpdated" {
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:WebHooks-RatePlanQueue-DEV"
 }
+
 
 # SNS Topic WebHooks WebHooks-RatePlanDeleted
 resource "aws_sns_topic" "WebHooks-RatePlanDeleted" {
@@ -377,6 +398,7 @@ resource "aws_sns_topic_subscription" "WebHooks-RatePlanDeleted" {
   endpoint  = "arn:aws:sqs:us-east-1:123:WebHooks-RatePlanQueue-DEV"
 }
 
+
 # SNS Topic WebHooks WebHooks-RatePlanOverride
 resource "aws_sns_topic" "WebHooks-RatePlanOverride" {
   name         = "WebHooks-RatePlanOverride-DEV"
@@ -389,11 +411,13 @@ resource "aws_sns_topic_subscription" "WebHooks-RatePlanOverride" {
   endpoint  = "arn:aws:sqs:us-east-1:123:WebHooks-RatePlanQueue-DEV"
 }
 
+
 # SNS Topic WebHooks WebHooks-PropertyCreated
 resource "aws_sns_topic" "WebHooks-PropertyCreated" {
   name         = "WebHooks-PropertyCreated-DEV"
   display_name = "WebHooks-PropertyCreated-DEV"
 }
+
 
 # SNS Topic WebHooks WebHooks-PropertyUpdated
 resource "aws_sns_topic" "WebHooks-PropertyUpdated" {
@@ -401,27 +425,32 @@ resource "aws_sns_topic" "WebHooks-PropertyUpdated" {
   display_name = "WebHooks-PropertyUpdated-DEV"
 }
 
+
 # SNS Topic WebHooks WebHooks-ProductBundleCreated
 resource "aws_sns_topic" "WebHooks-ProductBundleCreated" {
   name         = "WebHooks-ProductBundleCreated-DEV"
   display_name = "WebHooks-ProductBundleCreated-DEV"
 }
+
 resource "aws_sns_topic_subscription" "WebHooks-ProductBundleCreated" {
   topic_arn = aws_sns_topic.WebHooks-ProductBundleCreated.arn
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:WebHooks-RatePlanQueue-DEV"
 }
 
+
 # SNS Topic WebHooks WebHooks-ProductBundleUpdated
 resource "aws_sns_topic" "WebHooks-ProductBundleUpdated" {
   name         = "WebHooks-ProductBundleUpdated-DEV"
   display_name = "WebHooks-ProductBundleUpdated-DEV"
 }
+
 resource "aws_sns_topic_subscription" "WebHooks-ProductBundleUpdated" {
   topic_arn = aws_sns_topic.WebHooks-ProductBundleUpdated.arn
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:WebHooks-RatePlanQueue-DEV"
 }
+
 
 # SNS Topic WebHooks WebHooks-ProductBundleDeleted
 resource "aws_sns_topic" "WebHooks-ProductBundleDeleted" {
@@ -434,52 +463,60 @@ resource "aws_sns_topic_subscription" "WebHooks-ProductBundleDeleted" {
   endpoint  = "arn:aws:sqs:us-east-1:123:WebHooks-RatePlanQueue-DEV"
 }
 
+
 # SNS Topic WebHooks WebHooks-RateOverride
 resource "aws_sns_topic" "WebHooks-RateOverride" {
   name         = "WebHooks-RateOverride-DEV"
   display_name = "WebHooks-RateOverride-DEV"
 }
+
 resource "aws_sns_topic_subscription" "WebHooks-RateOverride" {
   topic_arn = aws_sns_topic.WebHooks-RateOverride.arn
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:WebHooks-RatePlanQueue-DEV"
 }
 
+
 # SNS Topic WebHooks WebHooks-RuleOverride
 resource "aws_sns_topic" "WebHooks-RuleOverride" {
   name         = "WebHooks-RuleOverride-DEV"
   display_name = "WebHooks-RuleOverride-DEV"
 }
+
 resource "aws_sns_topic_subscription" "WebHooks-RuleOverride" {
   topic_arn = aws_sns_topic.WebHooks-RuleOverride.arn
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:WebHooks-RatePlanQueue-DEV"
 }
 
+
 # SNS Topic WebHooks Create-Folio-DEV
 resource "aws_sns_topic" "Create-Folio" {
   name         = "Create-Folio-DEV"
   display_name = "Create-Folio-DEV"
 }
+
 resource "aws_sns_topic_subscription" "Create-Folio" {
   topic_arn = aws_sns_topic.Create-Folio.arn
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:Folio-Background-Queue-DEV"
 }
 
+
 # SNS Topic WebHooks Reservation-Status-Update
 resource "aws_sns_topic" "Reservation-Status-Update" {
   name         = "Reservation-Status-Update-DEV"
   display_name = "Reservation-Status-Update-DEV"
 }
+
 resource "aws_sns_topic_subscription" "Reservation-Status-Update" {
   topic_arn = aws_sns_topic.Reservation-Status-Update.arn
   protocol  = "sqs"
   endpoint  = "arn:aws:sqs:us-east-1:123:Reservation-Background-Queue-DEV"
 }
 
-# Mass Transit Topic subscriptions
 
+# Mass Transit Topic subscriptions
 resource "aws_sns_topic_subscription" "MT-Reservation-Updated-Event" {
   topic_arn = "arn:aws:sns:us-east-1:123:MT-ReservationUpdatedEvent-DEV.fifo"
   protocol  = "sqs"
