@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-api
+  labels:
+    app: auth-api
+    env: dev
+  namespace: identity
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: auth-api
+      labels:
+        env: dev
+        app: auth-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: auth-api
+        image: steblynskyi-docker.jfrog.io/identity-auth-api:2b04ce2
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: LOG_FLUENT_HOST
+          value: utils-fluentd-logging.dev-steblynskyi.com
+        - name: LOG_FLUENT_PORT
+          value: "24224"
+        - name: SECRET
+          value: |-
+            -----BEGIN RSA PRIVATE KEY-----
+            here=
+            -----END RSA PRIVATE KEY-----
+        - name: AWS_APP_KEY
+          value: vault:dev/data/aws/identity/auth-api/aws_access_key_id
+        - name: AWS_SECRET_KEY
+          value: vault:dev/data/aws/identity/auth-api/aws_secret_access_key
+        - name: AWS_REGION
+          value: us-east-1
+        - name: PUBLIC_KEY_BUCKET_NAME
+          value: steblynskyi-dev.inn.public-keys
+        - name: DYNAMO_EVENTS_TABLE
+          value: application-entitlements-dev
+        - name: INN_LOG_LEVEL
+          value: silly
+
+          value: here
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: auth-api
+  namespace: identity
+  labels:
+    Domain: identity-auth-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: auth-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 3000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: auth-api
+  namespace: identity
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: auth-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

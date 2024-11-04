@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: computers-ip-reporting-service
+  labels:
+    app: computers-ip-reporting-service
+    env: dev
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: computers-ip-reporting-service
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: computers-ip-reporting-service
+      labels:
+        app: computers-ip-reporting-service
+        env: dev
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: computers-ip-reporting-service
+          image: steblynskyi-docker.jfrog.io/ops-computers-ip-reporting-service:a1e99d1
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: DEV
+            - name: center_SMALLTOOLS_DB_USERNAME
+              value: "vault:dev/data/rds/sql-center/smalltools/username"
+            - name: center_SMALLTOOLS_DB_PASSWORD
+              value: "vault:dev/data/rds/sql-center/smalltools/password"
+            - name: "AllowedHosts"
+              value: "*"
+            - name: "ConnectionStrings__DefaultConnection"
+              value: "data source=sql-center.dev-steblynskyi.com;User ID=$(center_SMALLTOOLS_DB_USERNAME);Password=$(center_SMALLTOOLS_DB_PASSWORD);Initial Catalog=SmallToolsOps"
+            - name: "Logging__LogLevel__Default"
+              value: "Information"
+            - name: "Logging__LogLevel__Microsoft"
+              value: "Warning"
+            - name: "Logging__LogLevel__Microsoft.Hosting.Lifetime"
+              value: "Information"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: computers-ip-reporting-service
+  namespace: ops
+  labels:
+    Domain: ops-computers-ip-reporting-service.dev-steblynskyi.com
+spec:
+  selector:
+    app: computers-ip-reporting-service
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: computers-ip-reporting-service
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: computers-ip-reporting-service
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

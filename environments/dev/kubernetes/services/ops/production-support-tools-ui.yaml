@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: production-support-tools-ui
+  labels:
+    app: production-support-tools-ui
+    env: dev
+  namespace: ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: production-support-tools-ui
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: production-support-tools-ui
+      labels:
+        app: production-support-tools-ui
+        env: dev
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: production-support-tools-ui
+          image: steblynskyi-docker.jfrog.io/ops-production-support-tools-ui:900ae41
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: production-support-tools-ui
+  namespace: ops
+  labels:
+    Domain: ops-production-support-tools-ui.dev-steblynskyi.com
+spec:
+  selector:
+    app: production-support-tools-ui
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: production-support-tools-ui
+  namespace: ops
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: production-support-tools-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

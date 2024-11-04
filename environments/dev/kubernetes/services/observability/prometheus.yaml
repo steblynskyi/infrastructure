@@ -1,0 +1,155 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: prometheus
+  namespace: observability
+  labels:
+    app: prometheus-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: prometheus-server
+  serviceName: prometheus-gateway
+  template:
+    metadata:
+      labels:
+        app: prometheus-server
+        thanos-store-api: "true"
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: prometheus-server
+                namespaces:
+                  - "observability"
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+      containers:
+        - name: prometheus
+          image: quay.io/prometheus/prometheus:v2.34.0
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 1Gi
+          args:
+            - "--config.file=/etc/prometheus-shared/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus/"
+            - "--log.level=debug"
+            - "--web.enable-lifecycle"
+            - "--storage.tsdb.no-lockfile"
+            - "--storage.tsdb.min-block-duration=2h"
+            - "--storage.tsdb.max-block-duration=2h"
+          ports:
+            - containerPort: 9090
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          volumeMounts:
+            - name: prometheus-rules
+              mountPath: /etc/prometheus/rules
+            - name: prometheus-config-shared
+              mountPath: /etc/prometheus-shared/
+            - name: prometheus-storage
+              mountPath: /prometheus/
+        - name: thanos
+          image: quay.io/thanos/thanos:v0.27.0
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 500Mi
+          args:
+            - "sidecar"
+            - "--log.level=debug"
+            - "--tsdb.path=/prometheus"
+            - "--prometheus.url=http://127.0.0.1:9090"
+            - |
+              --objstore.config=type: S3
+              config:
+                bucket: "steblynskyi-dev-prometheus-thanos-storage"
+                endpoint: "s3.us-east-1.amazonaws.com"
+                access_key: "here"
+                secret_key: "here"
+            - "--reloader.config-file=/etc/prometheus/prometheus.yml.tmpl"
+            - "--reloader.config-envsubst-file=/etc/prometheus-shared/prometheus.yml"
+            - "--reloader.rule-dir=/etc/prometheus/rules/"
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - name: http-sidecar
+              containerPort: 10902
+            - name: grpc
+              containerPort: 10901
+          livenessProbe:
+              httpGet:
+                port: 10902
+                path: /-/healthy
+          readinessProbe:
+            httpGet:
+              port: 10902
+              path: /-/ready
+          volumeMounts:
+            - name: prometheus-storage
+              mountPath: /prometheus
+            - name: prometheus-config-shared
+              mountPath: /etc/prometheus-shared/
+            - name: prometheus-config
+              mountPath: /etc/prometheus
+            - name: prometheus-rules
+              mountPath: /etc/prometheus/rules
+      securityContext:
+        fsGroup: 2000
+        runAsNonRoot: true
+        runAsUser: 1000
+      volumes:
+        - name: prometheus-config
+          configMap:
+            defaultMode: 420
+            name: prometheus-server-conf
+        - name: prometheus-config-shared
+          emptyDir: {}
+        - name: prometheus-rules
+          configMap:
+            name: prometheus-rules
+  volumeClaimTemplates:
+  - metadata:
+      name: prometheus-storage
+      namespace: observability
+    spec:
+      accessModes:
+        - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: "25Gi"
+---
+#This service creates a srv record for querier to find about store-api's
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-gateway
+  namespace: observability
+  labels:
+    name: prometheus
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: grpc
+      port: 10901
+      targetPort: grpc
+  selector:
+    thanos-store-api: "true"

@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: employee-team-leader-manager
+  labels:
+    app: employee-team-leader-manager
+    env: dev
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: employee-team-leader-manager
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: employee-team-leader-manager
+      labels:
+        app: employee-team-leader-manager
+        env: dev
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: employee-team-leader-manager
+          image: steblynskyi-docker.jfrog.io/ops-employee-team-leader-manager:2aadc0c
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: "DetailedErrors"
+              value: "True"
+            - name: "Logging__LogLevel__Default"
+              value: "Information"
+            - name: "Logging__LogLevel__Microsoft.AspNetCore"
+              value: "Warning"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: employee-team-leader-manager
+  namespace: ops
+  labels:
+    Domain: ops-employee-team-leader-manager.dev-steblynskyi.com
+spec:
+  selector:
+    app: employee-team-leader-manager
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: employee-team-leader-manager
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: employee-team-leader-manager
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: release-ticket-management
+  labels:
+    app: release-ticket-management
+    env: dev
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: release-ticket-management
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: release-ticket-management
+      labels:
+        app: release-ticket-management
+        env: dev
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: release-ticket-management
+          image: steblynskyi-docker.jfrog.io/ops-release-ticket-management:08be574
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: INTERNALTOOLS_RELEASETICKETMANAGEMENT_DB_USERNAME
+              value: "vault:dev/data/rds/sql-internaltools/releaseticketmanagement/username"
+            - name: INTERNALTOOLS_RELEASETICKETMANAGEMENT_DB_PASSWORD
+              value: "vault:dev/data/rds/sql-internaltools/releaseticketmanagement/password"
+            - name: ConnectionStrings__RTMConnection
+              value: "Data source = internal-tools-db.dev-steblynskyi.com; Initial Catalog= SoftwareReleaseTickets; User Id = $(INTERNALTOOLS_RELEASETICKETMANAGEMENT_DB_USERNAME); password = $(INTERNALTOOLS_RELEASETICKETMANAGEMENT_DB_PASSWORD); Application Name = RCMTicketsManager; TrustServerCertificate = true;"
+            - name: AWS_ACCESS_KEY_ID
+              value: "vault:dev/data/aws/ops/release-ticket-management/aws_access_key_id"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "vault:dev/data/aws/ops/release-ticket-management/aws_secret_access_key"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: release-ticket-management
+  namespace: ops
+  labels:
+    Domain: ops-release-ticket-management.dev-steblynskyi.com
+spec:
+  selector:
+    app: release-ticket-management
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: release-ticket-management
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: release-ticket-management
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

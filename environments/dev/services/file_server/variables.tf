@@ -53,7 +53,7 @@ variable "key_name" {
 
 variable "sub_domain" {
   description = "Subdomain for application"
-  default     = "fileserver-inncenter"
+  default     = "fileserver-center"
 }
 
 variable "OU" {

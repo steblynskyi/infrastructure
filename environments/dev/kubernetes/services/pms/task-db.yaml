@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-db
+  labels:
+    app: task-db
+    env: dev
+  namespace: pms
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: task-db
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: task-db
+      labels:
+        env: dev
+        app: task-db
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: task-db
+        image: steblynskyi-docker.jfrog.io/guest-services-db:76d8e53
+        imagePullPolicy: Always
+        resources:
+        ports:
+        - containerPort: 5000
+          name: http

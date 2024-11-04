@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-monitoring-agent
+  labels:
+    app: booking-monitoring-agent
+    env: dev
+  namespace: be
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booking-monitoring-agent
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: booking-monitoring-agent
+      labels:
+        env: dev
+        app: booking-monitoring-agent
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: booking-monitoring-agent
+        image: steblynskyi-docker.jfrog.io/be-booking-monitoring-agent:86f3c73
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        env:
+          - name: URLS
+            value: "http://walterlagoon.client.dev-steblynskyi.com http://waltergolflagoon.client.dev-steblynskyi.com"
+          - name: API_URL
+            value: "http://pms-ui-events-api.dev-steblynskyi.com"
+          - name: CORE_API_URL
+            value: "http://be-core-api.dev-steblynskyi.com"
+          - name: SCHEDULE
+            value: "*/1 * * * *"
+          - name: NUMBER_OF_URLS_TO_PROCESS
+            value: "1"
+          - name: NUMBER_OF_SAMPLES
+            value: "1"

@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: delete-clients-center-web
+  labels:
+    app: delete-clients-center-web
+    env: dev
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: delete-clients-center-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: delete-clients-center-web
+      labels:
+        app: delete-clients-center-web
+        env: dev
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: delete-clients-center-web
+          image: steblynskyi-docker.jfrog.io/ops-delete-clients-center-web:39a62d4 
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: DEV
+            - name: RESERVATION_DB_USERNAME
+              value: "vault:dev/data/rds/sql-center/center01p/username"
+            - name: RESERVATION_DB_PASSWORD
+              value: "vault:dev/data/rds/sql-center/center01p/password"
+            - name: "AllowedHosts"
+              value: "*"
+            - name: "AppSettings__BatchDelay"
+              value: "0"
+            - name: "AppSettings__BatchSize"
+              value: "1000"
+            - name: "ConnectionStrings__center"
+              value: "Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_RESERVATION_DB_USERNAME); password=$(center_RESERVATION_DB_PASSWORD);Application Name=DeleteClientscenterWeb"
+            - name: "Logging__LogLevel__Default"
+              value: "Information"
+            - name: "Logging__LogLevel__Microsoft"
+              value: "Warning"
+            - name: "Logging__LogLevel__Microsoft.Hosting.Lifetime"
+              value: "Information"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: delete-clients-center-web
+  namespace: ops
+  labels:
+    Domain: ops-delete-clients-center-web.dev-steblynskyi.com
+spec:
+  selector:
+    app: delete-clients-center-web
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: delete-clients-center-web
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: delete-clients-center-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

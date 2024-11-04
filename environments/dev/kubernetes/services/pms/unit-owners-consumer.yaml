@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unit-owners-consumer
+  labels:
+    app: unit-owners-consumer
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: unit-owners-consumer
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: unit-owners-consumer
+      labels:
+        env: dev
+        app: unit-owners-consumer
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: unit-owners-consumer
+        image: steblynskyi-docker.jfrog.io/pms-unit-owners-consumer:bbf9c19b
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 384Mi
+        ports:
+        - containerPort: 80
+          name: tcp-listener
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+          tcpSocket:
+            port: tcp-listener
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: DEV
+        - name: UNITOWNERS_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-reservation/unitowners/username"
+        - name: UNITOWNERS_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-reservation/unitowners/password"
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/pms/unit-owners-consumer/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/pms/unit-owners-consumer/aws_secret_access_key"
+        - name: AWS_DEFAULT_REGION
+          value: us-east-1
+        - name: ConnectionStrings__UnitOwners
+          value: "Host=reservation-db.dev-steblynskyi.com;Database=unitowners;Username=$(UNITOWNERS_DB_USERNAME);Password=$(UNITOWNERS_DB_PASSWORD);Pooling=true;MaxPoolSize=250;Connection Idle Lifetime=300;Timeout=300;Application Name=steblynskyi.UnitOwners.Consumer;"
+        - name: ConnectionStrings__center
+          value: "Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_DB_USERNAME); password=$(center_DB_PASSWORD);connection lifetime=180;Connect Timeout=60;Application Name=steblynskyi.UnitOwners.Consumer;"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: unit-owners-consumer
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: unit-owners-consumer
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 330Mi

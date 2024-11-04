@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authentication-poc-web
+  labels:
+    app: authentication-poc-web
+    env: dev
+  namespace: ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authentication-poc-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: authentication-poc-web
+      labels:
+        app: authentication-poc-web
+        env: dev
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: authentication-poc-web
+          image: steblynskyi-docker.jfrog.io/ops-authentication-poc-web:9f95c63
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: DEV
+            - name: "Logging__IncludeScopes"
+              value: "False"
+            - name: "Logging__LogLevel__Default"
+              value: "Debug"
+            - name: "Logging__LogLevel__Microsoft"
+              value: "Information"
+            - name: "Logging__LogLevel__System"
+              value: "Information"
+            - name: "OneLogin__ApiLogoutEndpoint"
+              value: "https://steblynskyi-test-dev.onelogin.com/oidc/2/logout?post_logout_redirect_uri=ops-authentication-poc-web.dev-steblynskyi.com/Account/LogoutCallback&id_token_hint={0}"
+            - name: "OneLogin__ApiUsersEndpoint"
+              value: "https://steblynskyi-test-dev.onelogin.com/api/2/users?fields=id,firstname,lastname,custom_attributes"
+            - name: "OneLogin__ClientId"
+              value: "here"
+            - name: "OneLogin__ClientSecret"
+              value: "here"
+            - name: "OneLogin__Issuer"
+              value: "https://steblynskyi-test-dev.onelogin.com/oidc/2"
+            - name: "OneLogin__OneLoginAuthUri"
+              value: "https://steblynskyi-test-dev.onelogin.com/oidc/2/auth?client_id={0}&redirect_uri={1}&response_type=code&scope=openid%20groups%20profile"
+            - name: "OneLogin__RedirectUri"
+              value: "https://ops-authentication-poc-web.dev-steblynskyi.com/signin-oidc"
+            - name: "OneLogin__TokenUri"
+              value: "https://steblynskyi-test-dev.onelogin.com/oidc/2/token"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: authentication-poc-web
+  namespace: ops
+  labels:
+    Domain: ops-authentication-poc-web.dev-steblynskyi.com
+spec:
+  selector:
+    app: authentication-poc-web
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: authentication-poc-web
+  namespace: ops
+spec:
+  maxReplicas: 2
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: authentication-poc-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

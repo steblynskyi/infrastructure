@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: multi-languages-support-api
+  labels:
+    app: multi-languages-support-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: multi-languages-support-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: multi-languages-support-api
+      labels:
+        env: dev
+        app: multi-languages-support-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: multi-languages-support-api
+        image: steblynskyi-docker.jfrog.io/pms-multi-languages-support-api:6d620e0
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/status
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 20
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 384Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: center_INTERNATIONALIZATION_USERNAME
+          value: "vault:dev/data/rds/sql-center/InternationalizationDb/username"
+        - name: center_INTERNATIONALIZATION_PASSWORD
+          value: "vault:dev/data/rds/sql-center/InternationalizationDb/password"
+        - name: ConnectionStrings__steblynskyiDbConnection
+          value: "Server=tcp:sql-center.dev-steblynskyi.com,1433;Initial Catalog=InternationalizationDb;Persist Security Info=False;User ID=$(center_INTERNATIONALIZATION_USERNAME);Password=$(center_INTERNATIONALIZATION_PASSWORD);MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /health/live
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: multi-languages-support-api
+  namespace: pms
+  labels:
+    Domain: pms-multi-languages-support-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: multi-languages-support-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: multi-languages-support-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: multi-languages-support-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 350Mi

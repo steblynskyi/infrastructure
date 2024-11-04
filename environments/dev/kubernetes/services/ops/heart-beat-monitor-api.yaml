@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heart-beat-monitor-api
+  labels:
+    app: heart-beat-monitor-api
+    env: dev
+  namespace: ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: heart-beat-monitor-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: heart-beat-monitor-api
+      labels:
+        app: heart-beat-monitor-api
+        env: dev
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: heart-beat-monitor-api
+          image: steblynskyi-docker.jfrog.io/ops-heart-beat-monitor-api:bcbf153  
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: INTERNALTOOLS_HEARTBEATMONITOR_DB_USERNAME
+              value: "vault:dev/data/rds/sql-internaltools/heartbeatmonitor/username"
+            - name: INTERNALTOOLS_HEARTBEATMONITOR_DB_PASSWORD
+              value: "vault:dev/data/rds/sql-internaltools/heartbeatmonitor/password"
+            - name: AWS_ACCESS_KEY_ID
+              value: "vault:dev/data/aws/ops/heart-beat-monitor-api/aws_access_key_id"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "vault:dev/data/aws/ops/heart-beat-monitor-api/aws_secret_access_key"
+            - name: AWS_REGION
+              value: us-east-1
+            - name: "ConnectionStrings__HeartBeatDb"
+              value: "Server=internal-tools-db.dev-steblynskyi.com;user id=$(INTERNALTOOLS_HEARTBEATMONITOR_DB_USERNAME);Password=$(INTERNALTOOLS_HEARTBEATMONITOR_DB_PASSWORD);Database=HeartBeatMonitorDb;Application Name=heart-beat-monitor-api;"
+            - name: "Logging__LogLevel__Default"
+              value: "Information"
+            - name: "Logging__LogLevel__Microsoft"
+              value: "Warning"
+            - name: "Logging__LogLevel__Microsoft.Hosting.Lifetime"
+              value: "Information"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: heart-beat-monitor-api
+  namespace: ops
+  labels:
+    Domain: ops-heart-beat-monitor-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: heart-beat-monitor-api
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: heart-beat-monitor-api
+  namespace: ops
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: heart-beat-monitor-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

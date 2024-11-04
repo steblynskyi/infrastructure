@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pc
+  labels:
+    name: pc
+    vault-injector: "true"

@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: innsights-api
+  labels:
+    app: innsights-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: innsights-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: innsights-api
+      labels:
+        env: dev
+        app: innsights-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: innsights-api
+        image: steblynskyi-docker.jfrog.io/pms-innsights-api:acaeadb5
+        imagePullPolicy: Always
+        resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 350m
+              memory: 1024Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/pms/innsights-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/pms/innsights-api/aws_secret_access_key"
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: INNSIGHTS_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/username"
+        - name: INNSIGHTS_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/password"
+        - name: ConnectionStrings__Hangfire
+          value: "Host=innsights-db.dev-steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD);Pooling=true;MaxPoolSize=500;Connection Idle Lifetime=300;Timeout=300;CommandTimeout=300;Application Name=innSights.hangfire"
+        - name: ConnectionStrings__center
+          value: "Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_DB_USERNAME); password=$(center_DB_PASSWORD);Application Name=pms-innsights-api;TrustServerCertificate=true"
+        - name: ConnectionStrings__InnSights
+          value: "Host=innsights-db.dev-steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD);Pooling=true;MaxPoolSize=500;Connection Idle Lifetime=300;Timeout=300;CommandTimeout=300;Application Name=innSights.api"
+        - name: EmailSettings__ConnectionString
+          value: "Host=innsights-db.dev-steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD);Pooling=true;Application Name=innSights.api"
+        - name: ConnectionStrings__RedisCache
+          value: "redis.dev-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /hangfire/servers
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: innsights-api
+  namespace: pms
+  labels:
+    Domain: pms-innsights-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: innsights-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: innsights-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: innsights-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 980Mi

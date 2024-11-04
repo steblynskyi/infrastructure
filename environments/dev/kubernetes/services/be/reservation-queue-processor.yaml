@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservation-queue-processor
+  labels:
+    app: reservation-queue-processor
+    env: dev
+  namespace: be
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reservation-queue-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: reservation-queue-processor
+      labels:
+        env: dev
+        app: reservation-queue-processor
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: reservation-queue-processor
+        image: steblynskyi-docker.jfrog.io/be-reservation-queue-processor:8fd675c
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 350m
+            memory: 350Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/be/reservation-queue-processor/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/be/reservation-queue-processor/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: ConnectionStrings__centerDb
+          value: "Server=sql-center.dev-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;pooling=true;MultipleActiveResultSets=True;Application Name=steblynskyi.ReservationQueue.Processor;Max Pool Size=250;TrustServerCertificate=Yes;"

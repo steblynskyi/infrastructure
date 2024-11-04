@@ -16,7 +16,7 @@
             "Effect": "Allow",
             "Principal": {
                 "AWS": [
-                    "arn:aws:iam::123:user/store-inncenter-dev"
+                    "arn:aws:iam::123:user/store-center-dev"
                 ]
             },
             "Action": [
@@ -32,7 +32,7 @@
             "Sid": "S3 KMS access",
             "Effect": "Allow",
             "Principal": {
-                "AWS": "arn:aws:iam::123:user/store-inncenter-dev"
+                "AWS": "arn:aws:iam::123:user/store-center-dev"
             },
             "Action": [
                 "kms:Decrypt",

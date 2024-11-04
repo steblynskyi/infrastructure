@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: production-support-tools-api
+  labels:
+    app: production-support-tools-api
+    env: dev
+  namespace: ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: production-support-tools-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: production-support-tools-api
+      labels:
+        app: production-support-tools-api
+        env: dev
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: production-support-tools-api
+          image: steblynskyi-docker.jfrog.io/ops-production-support-tools-api:b9228d9
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: center_RESERVATION_DB_USERNAME
+              value: "vault:dev/data/rds/sql-center/center01p/username"
+            - name: center_RESERVATION_DB_PASSWORD
+              value: "vault:dev/data/rds/sql-center/center01p/password"
+            - name: center_INTERNATIONALIZATION_DB_USERNAME
+              value: "vault:dev/data/rds/sql-center/InternationalizationDb/username"
+            - name: center_INTERNATIONALIZATION_DB_PASSWORD
+              value: "vault:dev/data/rds/sql-center/InternationalizationDb/password"
+            - name: RESERVATION_HISTORY_DB_USERNAME
+              value: "vault:dev/data/rds/postgresql-reservation/pms-history/username"
+            - name: RESERVATION_HISTORY_DB_PASSWORD
+              value: "vault:dev/data/rds/postgresql-reservation/pms-history/password"
+            - name: center_SMALLTOOLS_DB_USERNAME
+              value: "vault:dev/data/rds/sql-center/smalltools/username"
+            - name: center_SMALLTOOLS_DB_PASSWORD
+              value: "vault:dev/data/rds/sql-center/smalltools/password"
+            - name: "ConnectionStrings__center"
+              value: "Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_RESERVATION_DB_USERNAME); password=$(center_RESERVATION_DB_PASSWORD);Application Name=ops-production-support-tools;Connection Timeout=7500;MultipleActiveResultSets=True;"
+            - name: "ConnectionStrings__MultiLanguageSupport"
+              value: "Server=tcp:sql-center.dev-steblynskyi.com,1433;Initial Catalog=InternationalizationDb;Persist Security Info=False;User ID=$(center_INTERNATIONALIZATION_DB_USERNAME);Password=$(center_INTERNATIONALIZATION_DB_PASSWORD);MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=True;Connection Timeout=30;"
+            - name: "ConnectionStrings__PmsHistory"
+              value: "Server=reservation-db.dev-steblynskyi.com;User Id=$(RESERVATION_HISTORY_DB_USERNAME);Password=$(RESERVATION_HISTORY_DB_PASSWORD);Database=pms_history;Application Name=ProductionSupportTools;"
+            - name: "ConnectionStrings__SmallTools"
+              value: "Server=sql-center.dev-steblynskyi.com;Database=SmallToolsOps;User Id=$(center_SMALLTOOLS_DB_USERNAME);password=$(center_SMALLTOOLS_DB_PASSWORD);Application Name=ProductionSupportTools;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: production-support-tools-api
+  namespace: ops
+  labels:
+    Domain: ops-production-support-tools-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: production-support-tools-api
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: production-support-tools-api
+  namespace: ops
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: production-support-tools-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

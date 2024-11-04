@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  labels:
+    Name: jenkins-ebs
+    failure-domain.beta.kubernetes.io/region: us-east-1
+    failure-domain.beta.kubernetes.io/zone: us-east-1a
+    type: amazonEBS
+  name: jenkins-ebs
+spec:
+  accessModes:
+  - ReadWriteOnce
+  awsElasticBlockStore:
+    fsType: ext4
+    volumeID: vol-067bade23020245a2
+  capacity:
+    storage: 50Gi
+  claimRef:
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    name: jenkins-ebs
+    namespace: jenkins
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: gp2

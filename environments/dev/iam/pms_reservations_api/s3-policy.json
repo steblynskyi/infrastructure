@@ -6,8 +6,8 @@
             "Effect": "Allow",
             "Action": "s3:*",
             "Resource": [
-                "arn:aws:s3:::steblynskyi-dev-store-inncenter",
-                "arn:aws:s3:::steblynskyi-dev-store-inncenter/*",
+                "arn:aws:s3:::steblynskyi-dev-store-center",
+                "arn:aws:s3:::steblynskyi-dev-store-center/*",
                 "arn:aws:s3:::steblynskyi-dev-identity-documents",
                 "arn:aws:s3:::steblynskyi-dev-identity-documents/*",
                 "arn:aws:s3:::steblynskyi-dev-pms-email-attachments",

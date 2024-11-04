@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluent-bit
+  namespace: utils
+  labels:
+    app: fluent-bit
+    env: prod
+spec:
+  replicas: 2
+  template:
+    metadata:
+      name: fluent-bit
+      labels:
+        app: fluent-bit
+    spec:
+      containers:
+        - name: fluent-bit
+          image: fluent/fluent-bit:2.1.2-debug
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 24224
+              name: http-forwarder
+            - containerPort: 8080
+              name: status-service
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              port: http-service
+              path: /api/v1/uptime
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          env:
+            - name: FLUENT_ELASTICSEARCH_HOST
+              value: "vpc-utils-logging-dev-cqg3cgfljgvffe43x7tjnbmixy.us-east-1.es.amazonaws.com"
+            - name: FLUENT_ELASTICSEARCH_PORT
+              value: "443"
+            - name: AWS_ACCESS_KEY_ID
+              value: "here"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "here"
+          volumeMounts:
+            - name: fluent-bit-config
+              mountPath: /fluent-bit/etc/
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "64Mi"
+      volumes:
+        - name: fluent-bit-config
+          configMap:
+            name: fluent-bit-config
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: fluent-bit
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: fluent-bit
+  namespace: utils
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "Name=Fluent-Bit-Log"
+    service.beta.kubernetes.io/aws-load-balancer-security-groups: sg-09b59f856490bbf5e
+    service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-085b2e673568d83eb,subnet-03916b6451a44e7c0
+    external-dns.alpha.kubernetes.io/hostname: utils-logging.dev-steblynskyi.com
+spec:
+  ports:
+    - port: 80
+      name: status-service
+      targetPort: 8080
+      protocol: TCP
+    - port: 24224
+      name: http-forwarder
+      targetPort: 24224
+      protocol: TCP
+  selector:
+    app: fluent-bit
+  type: LoadBalancer
+#---
+#apiVersion: autoscaling/v2beta2
+#kind: HorizontalPodAutoscaler
+#metadata:
+#  name: fluent-bit
+#  namespace: utils
+#spec:
+#  maxReplicas: 4
+#  minReplicas: 1
+#  scaleTargetRef:
+#    apiVersion: apps/v1
+#    kind: Deployment
+#    name: fluent-bit
+#  metrics:
+#    - type: Resource
+#      resource:
+#        name: cpu
+#        target:
+#          type: Utilization
+#          averageUtilization: 65
+#    - type: Resource
+#      resource:
+#        name: memory
+#        target:
+#          type: Utilization
+#          averageValue: 220Mi

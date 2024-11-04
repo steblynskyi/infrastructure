@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rates-ui
+  labels:
+    app: rates-ui
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rates-ui
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: rates-ui
+      labels:
+        env: dev
+        app: rates-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: rates-ui
+        image: steblynskyi-docker.jfrog.io/pms-rates-ui:305eb26a5
+        imagePullPolicy: IfNotPresent
+        args:
+        - -base-path=/inventory
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 384Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_center_API_BASE_URL
+          value: https://app.dev-steblynskyi.com/
+        - name: APP_PMS_center_API
+          value: https://pms-center-api.dev-steblynskyi.com/api/v1
+        - name: APP_OPEN_ID_API_URL
+          value: https://be-auth-openid-api.dev-steblynskyi.com/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: rates-ui
+  namespace: pms
+  labels:
+    Domain: pms-rates-ui.dev-steblynskyi.com
+spec:
+  selector:
+    app: rates-ui
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rates-ui
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rates-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 130m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 350Mi

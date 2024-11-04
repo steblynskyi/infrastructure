@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database-info-system
+  labels:
+    app: database-info-system
+    env: dev
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: database-info-system
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: database-info-system
+      labels:
+        app: database-info-system
+        env: dev
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: database-info-system
+          image: steblynskyi-docker.jfrog.io/ops-database-info-system:172ee89
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: INTERNALTOOLS_DATABASEINFOSYSTEM_DB_USERNAME
+              value: "vault:dev/data/rds/sql-internaltools/databaseinfosystem/username"
+            - name: INTERNALTOOLS_DATABASEINFOSYSTEM_DB_PASSWORD
+              value: "vault:dev/data/rds/sql-internaltools/databaseinfosystem/password"
+            - name: "ConnectionStrings__DbConnection"
+              value: "Data source=internal-tools-db.dev-steblynskyi.com;Initial Catalog = DatabaseInfoSystemDb;user id = $(INTERNALTOOLS_DATABASEINFOSYSTEM_DB_USERNAME); password = $(INTERNALTOOLS_DATABASEINFOSYSTEM_DB_PASSWORD); Application Name = DatabaseInformationSystem; TrustServerCertificate=True;"
+            - name: "OneLogin__ClientId"
+              value: "here"
+            - name: "OneLogin__ClientSecret"
+              value: "here"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: database-info-system
+  namespace: ops
+  labels:
+    Domain: ops-database-info-system.dev-steblynskyi.com
+spec:
+  selector:
+    app: database-info-system
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: database-info-system
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: database-info-system
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

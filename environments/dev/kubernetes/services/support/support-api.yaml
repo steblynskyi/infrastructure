@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  support-api
+  labels:
+    app: support-api
+    env: dev
+  namespace: support
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: support-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: support-api
+      labels:
+        env: dev
+        app: support-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: support-api
+        image: steblynskyi-docker.jfrog.io/support-api:93bab30
+        imagePullPolicy: Always
+        resources:
+          requests:
+              cpu: 50m
+              memory: 64Mi
+          limits:
+              cpu: 250m
+              memory: 256Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+          - name: OPEN_ID_API_URL
+            value: https://be-auth-openid-api.dev-steblynskyi.com/loginapi/OpenIdLogin
+          - name: AUTH_API_URL
+            value: https://be-auth-openid-api.dev-steblynskyi.com/api/v1
+          - name: ALLOWED_DOMAINS
+            value: https://support-web.dev-steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: support-api
+  namespace: support
+  labels:
+    Domain: support-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: support-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort

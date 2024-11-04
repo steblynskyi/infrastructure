@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-engine-web
+  labels:
+    app: booking-engine-web
+    env: dev
+  namespace: be
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: booking-engine-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: booking-engine-web
+      labels:
+        env: dev
+        app: booking-engine-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: booking-engine-web
+        image: steblynskyi-docker.jfrog.io/be-bookingengine-web:79678a42
+        imagePullPolicy: Always
+        args:
+        - -security-disable=true
+        - -set-custom-header=Access-Control-Allow-Origin:*
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_INN_BOOKING_WEB_URL
+          value: "https://be-booking-engine-web.dev-steblynskyi.com"
+        - name: APP_INN_BOOKING_API_URL
+          value: "https://be-booking-engine-api.dev-steblynskyi.com"
+        - name: HOST
+          value: "client.dev-steblynskyi.com"
+        - name: PORT
+          value: "80"
+        - name: APP_INN_BOOKING_PROTECTED_API_URL
+          value: "https://be-booking-engine-protected-api.dev-steblynskyi.com"
+        - name: APP_INN_SESSION_API_URL
+          value: "https://app.dev-steblynskyi.com/steblynskyiServices/SessionStatus"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: booking-engine-web
+  namespace: be
+  labels:
+    Domain: be-booking-engine-web.dev-steblynskyi.com
+spec:
+  selector:
+    app: booking-engine-web
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: booking-engine-web
+  namespace: be
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: booking-engine-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

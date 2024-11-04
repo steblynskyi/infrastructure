@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: time-tracker-web
+  labels:
+    app: time-tracker-web
+    env: dev
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: time-tracker-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: time-tracker-web
+      labels:
+        app: time-tracker-web
+        env: dev
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: time-tracker-web
+          image: steblynskyi-docker.jfrog.io/ops-time-tracker-web:37d61fa
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: "Logging__LogLevel__Default"
+              value: "Debug"
+            - name: "Logging__LogLevel__Microsoft"
+              value: "Information"
+            - name: "Logging__LogLevel__System"
+              value: "Information"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: time-tracker-web
+  namespace: ops
+  labels:
+    Domain: ops-time-tracker-web.dev-steblynskyi.com
+spec:
+  selector:
+    app: time-tracker-web
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: time-tracker-web
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: time-tracker-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

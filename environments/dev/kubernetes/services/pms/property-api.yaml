@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: property-api
+  labels:
+    app: property-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: property-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: property-api
+      labels:
+        env: dev
+        app: property-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: property-api
+        image: steblynskyi-docker.jfrog.io/pms-property-api:4b3a4ce
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__centerDb
+          value: "Application Name=pms.property.api;data source=sql-center.dev-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;pooling=true;connection lifetime=120;max pool size=3000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: property-api
+  namespace: pms
+  labels:
+    Domain: pms-property-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: property-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: property-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: property-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 480Mi

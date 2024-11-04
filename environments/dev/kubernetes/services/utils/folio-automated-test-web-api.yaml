@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  folio-automated-test-web-api
+  labels:
+    app: folio-automated-test-web-api
+    env: dev
+  namespace: utils
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: folio-automated-test-web-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: folio-automated-test-web-api
+      labels:
+        env: dev
+        app: folio-automated-test-web-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: folio-automated-test-web-api
+        image: steblynskyi-docker.jfrog.io/utils-folio-automated-test-web-api:4c13ec2
+        imagePullPolicy: Always
+        resources:
+          requests:
+             cpu: 75m
+             memory: 64Mi
+          limits:
+             cpu: 250m
+             memory: 500Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: folio-automated-test-web-api
+  namespace: utils
+  labels:
+    Domain: utils-folio-automated-test-web-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: folio-automated-test-web-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: folio-automated-test-web-api
+  namespace: utils
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: folio-automated-test-web-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

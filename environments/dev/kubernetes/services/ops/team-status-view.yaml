@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: team-status-view
+  labels:
+    app: team-status-view
+    env: dev
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: team-status-view
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: team-status-view
+      labels:
+        app: team-status-view
+        env: dev
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: team-status-view
+          image: steblynskyi-docker.jfrog.io/ops-team-status-view:80bf0f9
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: AWS_ACCESS_KEY_ID
+              value: "vault:dev/data/aws/ops/team-status-view/aws_access_key_id"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "vault:dev/data/aws/ops/team-status-view/aws_secret_access_key"
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: "Logging__LogLevel__Default"
+              value: "Information"
+            - name: "Logging__LogLevel__Microsoft"
+              value: "Warning"
+            - name: "Logging__LogLevel__Microsoft.Hosting.Lifetime"
+              value: "Information"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: team-status-view
+  namespace: ops
+  labels:
+    Domain: ops-team-status-view.dev-steblynskyi.com
+spec:
+  selector:
+    app: team-status-view
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: team-status-view
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: team-status-view
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: b2b
+  labels:
+    name: b2b
+    vault-injector: "true"

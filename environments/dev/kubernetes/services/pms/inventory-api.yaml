@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-api
+  labels:
+    app: inventory-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inventory-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: inventory-api
+      labels:
+        env: dev
+        app: inventory-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: inventory-api
+        image: steblynskyi-docker.jfrog.io/pms-inventory-api:2426e053a
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        ports:
+        - containerPort: 5000
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: DEV
+        - name: AppSettings__RateEngineUrl
+          value: "https://pms-rate-engine-grpc-api.dev-steblynskyi.com"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/pms/inventory-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/pms/inventory-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: center_RATES_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/ratesapi/username"
+        - name: center_RATES_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/ratesapi/password"
+        - name: INNSIGHTS_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/username"
+        - name: INNSIGHTS_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/password"
+        - name: RESERVATION_RATEENGINE_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-reservation/rateengine/username"
+        - name: RESERVATION_RATEENGINE_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-reservation/rateengine/password"
+        - name: ConnectionStrings__History
+          value: "Server=reservation-db.dev-steblynskyi.com;User Id=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD);Database=rateengine; Application Name=pms-inventory-api"
+        - name: ConnectionStrings__center
+          value: "Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_RATES_DB_USERNAME);Password=$(center_RATES_DB_PASSWORD); pooling=true; Max Pool Size=500; connection lifetime=180;Connect Timeout=60; Application Name=pms-inventory-api; MultipleActiveResultSets=True; TrustServerCertificate=true;"
+        - name: ConnectionStrings__InnSights
+          value: "Host=innsights-db.dev-steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD); Application Name=pms-inventory-api"
+        - name: ConnectionStrings__RateEngine
+          value: "Application Name=pms-inventory-api;User ID=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD);Server=reservation-db.dev-steblynskyi.com;Database=rateengine;Maximum Pool Size=200;"
+        - name: DistributedCache__RedisCache
+          value: "redis.dev-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: inventory-api
+  namespace: pms
+  labels:
+    Domain: pms-inventory-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: inventory-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inventory-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inventory-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 980Mi

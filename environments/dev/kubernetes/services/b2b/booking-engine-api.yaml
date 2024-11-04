@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-engine-api
+  labels:
+    app: booking-engine-api
+    env: dev
+  namespace: b2b
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: booking-engine-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: booking-engine-api
+      labels:
+        env: dev
+        app: booking-engine-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: booking-engine-api
+        image: steblynskyi-docker.jfrog.io/b2b-booking-engine-api:c488bf6
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /health/status
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+        - name: ConnectionStrings__Redis
+          value: "redis.dev-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /health/live
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: booking-engine-api
+  namespace: b2b
+  labels:
+    Domain: b2b-booking-engine-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: booking-engine-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: booking-engine-api
+  namespace: b2b
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: booking-engine-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

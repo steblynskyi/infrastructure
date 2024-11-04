@@ -4,7 +4,7 @@ data "aws_iam_instance_profile" "ec2_instance_profile" {
 }
 
 # SSL Certificate
-data "aws_acm_certificate" "devinnroad-cert" {
+data "aws_acm_certificate" "dev-steblynskyi-cert" {
   domain = var.main_domain
 }
 

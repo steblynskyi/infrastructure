@@ -1,0 +1,13 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: reports-web
+  namespace: payments
+  labels:
+    app: reports-web
+    env: dev
+spec:
+  serviceRef:
+    name: reports-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Payments-Reports-Web-DEV/d1080e8e09971c57

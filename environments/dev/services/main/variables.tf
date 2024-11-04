@@ -275,11 +275,11 @@ variable "setup_lightspeed_port" {
   default = 31886
 }
 
-variable "inncenter_web" {
-  default = "Inncenter-Web"
+variable "center_web" {
+  default = "center-Web"
 }
 
-variable "inncenter_web_port" {
+variable "center_web_port" {
   default = 31435
 }
 

@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unit-owners-api
+  labels:
+    app: unit-owners-api
+    env: dev
+  namespace: b2b
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: unit-owners-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: unit-owners-api
+      labels:
+        env: dev
+        app: unit-owners-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: unit-owners-api
+        image: steblynskyi-docker.jfrog.io/b2b-unit-owners-api:ad5d6a1
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /unit-owners-portal/health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /unit-owners-portal/health/status
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: DEV
+        - name: RedisCache__ConnectionString
+          value: redis.dev-steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /unit-owners-portal/health/live
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: unit-owners-api
+  namespace: b2b
+  labels:
+    Domain: b2b-unit-owners-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: unit-owners-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: unit-owners-api
+  namespace: b2b
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: unit-owners-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

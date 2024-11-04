@@ -11,7 +11,7 @@ server:
   ingress:
     enabled: true
     hosts:
-      - host: vault2.usinnroad.com
+      - host: vault2.ussteblynskyi.com
   ha:
     enabled: true
     replicas: 5

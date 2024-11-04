@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-processor
+  labels:
+    app: webhook-processor
+    env: dev
+  namespace: payments
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webhook-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: webhook-processor
+      labels:
+        env: dev
+        app: webhook-processor
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: webhook-processor
+        image: steblynskyi-docker.jfrog.io/payments-webhook-processor:8fb3871
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 6000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: DEV
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: RESERVATION_PAYMENTS_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-reservation/payments/username"
+        - name: RESERVATION_PAYMENTS_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-reservation/payments/password"
+        - name: ConnectionStrings__steblynskyiPaymentsDb
+          value: Server=sql-center.dev-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=steblynskyiPayments;pooling=true;MultipleActiveResultSets=True;Application Name=steblynskyi.Api;Encrypt=Optional;Max Pool Size=250
+        - name: "ConnectionStrings__hangfireDb"
+          value: "Server=reservation-db.dev-steblynskyi.com;User Id=$(RESERVATION_PAYMENTS_DB_USERNAME);Password=$(RESERVATION_PAYMENTS_DB_PASSWORD);Database=payments"
+        - name: "EmailServiceSettings__EmailServiceApi"
+          value: "https://utils-communication-email-ses.dev-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: webhook-processor
+  namespace: payments
+  labels:
+    Domain: payments-webhook-processor.dev-steblynskyi.com
+spec:
+  selector:
+    app: webhook-processor
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 6000
+    protocol: TCP
+  type: NodePort

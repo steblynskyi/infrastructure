@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interview-management-system-v2
+  labels:
+    app: interview-management-system-v2
+    env: dev
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: interview-management-system-v2
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: interview-management-system-v2
+      labels:
+        app: interview-management-system-v2
+        env: dev
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: interview-management-system-v2
+          image: steblynskyi-docker.jfrog.io/ops-interview-management-system-v2:3e1d129
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: INTERNALTOOLS_INTERVIEWMANAGEMENTSYSTEM_DB_USERNAME
+              value: "vault:dev/data/rds/sql-internaltools/interviewmanagementsystem/username"
+            - name: INTERNALTOOLS_INTERVIEWMANAGEMENTSYSTEM_DB_PASSWORD
+              value: "vault:dev/data/rds/sql-internaltools/interviewmanagementsystem/password"
+            - name: AWS_ACCESS_KEY_ID
+              value: "vault:dev/data/aws/ops/interview-management-system/aws_access_key_id"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "vault:dev/data/aws/ops/interview-management-system/aws_secret_access_key"
+            - name: AWS_DEFAULT_REGION
+              value: us-east-1
+            - name: "ConnectionStrings__IMSConnection"
+              value: "Data source=internal-tools-db.dev-steblynskyi.com;Initial Catalog = InterviewMgmtSystem;user id =$(INTERNALTOOLS_INTERVIEWMANAGEMENTSYSTEM_DB_USERNAME); password =$(INTERNALTOOLS_INTERVIEWMANAGEMENTSYSTEM_DB_PASSWORD); Application Name = InterviewManagementSystem; TrustServerCertificate=True;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: interview-management-system-v2
+  namespace: ops
+  labels:
+    Domain: ops-interview-management-system-v2.dev-steblynskyi.com
+spec:
+  selector:
+    app: interview-management-system-v2
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: interview-management-system-v2
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: interview-management-system-v2
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-portal-api
+  labels:
+    app: devops-portal-api
+    env: dev
+  namespace: envops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: devops-portal-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: devops-portal-api
+      labels:
+        env: dev
+        app: devops-portal-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: devops-portal-api
+        image: steblynskyi-docker.jfrog.io/envops-devops-portal-api:e325513
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          value: here
+        - name: AWS_SECRET_KEY
+          value: here
+        - name: AWS_REGION
+          value: us-east-1
+        - name: DB_HOST
+          value: devops-db.dev-steblynskyi.com:5432
+        - name: DB_USER
+          value: syssteblynskyi_devops_portal
+        - name: DB_PASSWORD
+          value: none
+        - name: DB_NAME
+          value: devops_portal
+        - name: GITHUB_TOKEN
+          value: here
+        - name: SCRAPE_KEYS
+          value: app.dev-steblynskyi.com,app.qa-steblynskyi.com,app.prod-steblynskyi.com,sql-center.dev-steblynskyi.com,sql-center.dev-steblynskyi.com,sql-center.qa-steblynskyi.com,sql-center.prod-steblynskyi.com,
+        - name: SCRAPE_TO_EMAILs
+          value: taras.steblynskyi@steblynskyi.com,user_1.pallapati@steblynskyi.com,user_2@steblynskyi.com,user_3w@steblynskyi.com
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: devops-portal-api
+  namespace: envops
+  labels:
+    Domain: envops-devops-portal-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: devops-portal-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: devops-portal-api
+  namespace: envops
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: devops-portal-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

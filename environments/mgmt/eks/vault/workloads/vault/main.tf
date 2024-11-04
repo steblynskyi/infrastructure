@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket = "ir-dev.us-standard.int.kube"
+    bucket = "steblynskyi-dev-kube"
     key    = "terraform/us-access/vault.tfstate"
     region = "us-east-1"
   }

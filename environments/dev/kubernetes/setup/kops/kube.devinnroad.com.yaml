@@ -1,0 +1,277 @@
+apiVersion: kops.k8s.io/v1alpha2
+kind: Cluster
+metadata:
+  creationTimestamp: "2020-01-27T14:18:41Z"
+  generation: 45
+  name: kube.dev-steblynskyi.com
+spec:
+  api:
+    loadBalancer:
+      class: Classic
+      type: Public
+  authorization:
+    rbac: {}
+  channel: stable
+  cloudProvider: aws
+  configBase: s3://steblynskyi-dev-kube/terraform/dev/kube.dev-steblynskyi.com
+  dnsZone: dev-steblynskyi.com
+  docker:
+    ipMasq: true
+    ipTables: true
+  etcdClusters:
+  - etcdMembers:
+    - instanceGroup: master-us-east-1a
+      name: a
+    manager:
+      env:
+      - name: ETCD_CIPHER_SUITES
+        value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+    name: main
+  - etcdMembers:
+    - instanceGroup: master-us-east-1a
+      name: a
+    manager:
+      env:
+      - name: ETCD_CIPHER_SUITES
+        value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+    name: events
+  fileAssets:
+  - content: |
+      apiVersion: audit.k8s.io/v1 # This is required.
+      kind: Policy
+      omitStages:
+        - "RequestReceived"
+      rules:
+        - level: RequestResponse
+          resources:
+          - group: ""
+            resources: ["pods"]
+        - level: Metadata
+          resources:
+          - group: ""
+            resources: ["pods/log", "pods/status"]
+
+        - level: None
+          resources:
+          - group: ""
+            resources: ["configmaps"]
+            resourceNames: ["controller-leader"]
+
+        - level: None
+          users: ["system:kube-proxy"]
+          verbs: ["watch"]
+          resources:
+          - group: "" # core API group
+            resources: ["endpoints", "services"]
+
+        - level: None
+          userGroups: ["system:authenticated"]
+          nonResourceURLs:
+          - "/api*" # Wildcard matching.
+          - "/version"
+
+        - level: Request
+          resources:
+          - group: "" # core API group
+            resources: ["configmaps"]
+          namespaces: ["kube-system"]
+
+        - level: Metadata
+          resources:
+          - group: "" # core API group
+            resources: ["secrets", "configmaps"]
+
+        - level: Request
+          resources:
+          - group: "" # core API group
+          - group: "extensions" # Version of group should NOT be included.
+
+        - level: Metadata
+          omitStages:
+            - "RequestReceived"
+    name: audit-policy-config
+    path: /srv/kubernetes/kube-apiserver/audit-policy-config.yaml
+    roles:
+    - Master
+  iam:
+    allowContainerRegistry: true
+    legacy: false
+  kubeAPIServer:
+    admissionControl:
+    - NamespaceLifecycle
+    - LimitRanger
+    - ServiceAccount
+    - PersistentVolumeLabel
+    - DefaultStorageClass
+    - DefaultTolerationSeconds
+    - NodeRestriction
+    - ResourceQuota
+    - AlwaysPullImages
+    auditLogMaxAge: 10
+    auditLogMaxBackups: 1
+    auditLogMaxSize: 100
+    auditLogPath: /var/log/kube-apiserver-audit.log
+    auditPolicyFile: /srv/kubernetes/kube-apiserver/audit-policy-config.yaml
+    oidcClientID: 1111-2222-333-444-555555555
+    oidcGroupsClaim: groups
+    oidcIssuerURL: https://steblynskyi.onelogin.com/oidc/2
+    tlsCipherSuites:
+    - TLS_AES_128_GCM_SHA256
+    - TLS_AES_256_GCM_SHA384
+    - TLS_CHACHA20_POLY1305_SHA256
+    - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+    - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+    - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+    - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+    - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+    - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+    - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+    - TLS_RSA_WITH_AES_128_CBC_SHA
+    - TLS_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_RSA_WITH_AES_256_CBC_SHA
+    - TLS_RSA_WITH_AES_256_GCM_SHA384
+    tlsMinVersion: VersionTLS12
+  kubeDNS:
+    provider: CoreDNS
+  kubelet:
+    anonymousAuth: false
+    authenticationTokenWebhook: true
+    authorizationMode: Webhook
+    evictionHard: memory.available<512Mi,nodefs.available<10%,nodefs.inodesFree<10%,imagefs.available<10%,imagefs.inodesFree<10%
+    tlsCipherSuites:
+    - TLS_AES_128_GCM_SHA256
+    - TLS_AES_256_GCM_SHA384
+    - TLS_CHACHA20_POLY1305_SHA256
+    - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+    - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+    - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+    - TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+    - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+    - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+    - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+    - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+    - TLS_RSA_WITH_AES_128_CBC_SHA
+    - TLS_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_RSA_WITH_AES_256_CBC_SHA
+    - TLS_RSA_WITH_AES_256_GCM_SHA384
+    tlsMinVersion: VersionTLS12
+  kubernetesApiAccess:
+  - 0.0.0.0/0
+  kubernetesVersion: 1.23.14
+  masterInternalName: api-internal-kube.dev-steblynskyi.com
+  masterPublicName: api-kube.dev-steblynskyi.com
+  networkCIDR: 10.10.0.0/16
+  networkID: vpc-123
+  networking:
+    flannel:
+      backend: vxlan
+  nonMasqueradeCIDR: 100.64.0.0/10
+  sshAccess:
+  - 0.0.0.0/0
+  sshKeyName: linux-admin
+  subnets:
+  - cidr: 10.10.32.0/19
+    egress: nat-08fb345079daa21bc
+    name: us-east-1a
+    type: Private
+    zone: us-east-1a
+  - cidr: 10.10.64.0/19
+    egress: nat-08fb345079daa21bc
+    name: us-east-1b
+    type: Private
+    zone: us-east-1b
+  - cidr: 10.10.20.0/22
+    name: utility-us-east-1a
+    type: Utility
+    zone: us-east-1a
+  - cidr: 10.10.24.0/22
+    name: utility-us-east-1b
+    type: Utility
+    zone: us-east-1b
+  topology:
+    dns:
+      type: Public
+    masters: private
+    nodes: private
+
+---
+
+apiVersion: kops.k8s.io/v1alpha2
+kind: InstanceGroup
+metadata:
+  creationTimestamp: "2020-01-27T14:18:41Z"
+  generation: 6
+  labels:
+    kops.k8s.io/cluster: kube.dev-steblynskyi.com
+  name: master-us-east-1a
+spec:
+  additionalSecurityGroups:
+  - sg-0f45f1e1c2452d401
+  associatePublicIp: false
+  image: 099720109477/ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20221018
+  machineType: t3.medium
+  maxSize: 1
+  minSize: 1
+  nodeLabels:
+    kops.k8s.io/instancegroup: master-us-east-1a
+  role: Master
+  subnets:
+  - us-east-1a
+
+---
+
+apiVersion: kops.k8s.io/v1alpha2
+kind: InstanceGroup
+metadata:
+  creationTimestamp: "2020-01-27T14:18:41Z"
+  generation: 27
+  labels:
+    kops.k8s.io/cluster: kube.dev-steblynskyi.com
+  name: nodes
+spec:
+  additionalSecurityGroups:
+  - sg-0f45f1e1c2452d401
+  associatePublicIp: false
+  image: 099720109477/ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20221018
+  machineType: t3.large
+  maxSize: 13
+  minSize: 13
+  nodeLabels:
+    kops.k8s.io/instancegroup: nodes
+  role: Node
+  subnets:
+  - us-east-1a
+  - us-east-1b
+
+---
+
+# apiVersion: kops.k8s.io/v1alpha2
+# kind: InstanceGroup
+# metadata:
+#   creationTimestamp: "2022-05-27T06:00:32Z"
+#   generation: 17
+#   labels:
+#     kops.k8s.io/cluster: kube.dev-steblynskyi.com
+#   name: nodes-jenkins
+# spec:
+#   image: 099720109477/ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-20221018
+#   machineType: c5ad.xlarge
+#   maxSize: 0
+#   minSize: 0
+#   nodeLabels:
+#     kops.k8s.io/instancegroup: nodes-jenkins
+#   role: Node
+#   subnets:
+#   - us-east-1a
+#   - us-east-1b
+#   taints:
+#   - jenkins=true:NoSchedule

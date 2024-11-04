@@ -1,0 +1,130 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payments-ingress-internal
+  namespace: payments
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/target-node-labels: kops.k8s.io/instancegroup=nodes
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/tags: Environment=DEV,Name=Payments-Ingress-Internal
+    alb.ingress.kubernetes.io/subnets: subnet-1,subnet-2
+    alb.ingress.kubernetes.io/security-groups: sg-1
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-55555
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80,"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=false,access_logs.s3.bucket=steblynskyi-dev-access-logs,access_logs.s3.prefix=be,deletion_protection.enabled=true,routing.http2.enabled=true,idle_timeout.timeout_seconds=120
+spec:
+  rules:
+  - host: payments-credit-card-token-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: credit-card-token-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: payments-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-statement-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: payments-statement-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: payments-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-payout-processor.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: payout-processor
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-reports-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reports-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-webhook-processor.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: webhook-processor
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-webhook-testing-tool.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: webhook-testing-tool
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-hangfire-dashboard.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: hangfire-dashboard
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-correction-tool-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: correction-tool-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-correction-tool-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: correction-tool-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific

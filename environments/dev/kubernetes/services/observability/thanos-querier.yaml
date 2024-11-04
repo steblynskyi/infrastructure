@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thanos-querier
+  namespace: observability
+  labels:
+    app: thanos-querier
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: thanos-querier
+  template:
+    metadata:
+      labels:
+        app: thanos-querier
+    spec:
+      containers:
+      - name: thanos
+        image: quay.io/thanos/thanos:v0.27.0
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 500Mi
+        args:
+        - query
+        - --http-address=0.0.0.0:10902
+        - --query.replica-label=replica
+        - --store=dnssrv+prometheus-gateway:10901
+        - --query.timeout=2m
+        - --query.partial-response
+        - --query.auto-downsampling
+        - --store.response-timeout=2m
+        ports:
+        - name: http
+          containerPort: 10902
+        - name: grpc
+          containerPort: 10901
+        livenessProbe:
+          httpGet:
+            port: http
+            path: /-/healthy
+        readinessProbe:
+          httpGet:
+            port: http
+            path: /-/ready
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  labels:
+    Domain: observability-prometheus.dev-steblynskyi.com
+    app: thanos-querier
+  name: thanos-querier
+  namespace: observability
+spec:
+  ports:
+  - port: 80
+    targetPort: 10902
+    name: ui
+  selector:
+    app: thanos-querier
+  type: NodePort

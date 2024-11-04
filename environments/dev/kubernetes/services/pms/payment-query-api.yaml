@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-query-api
+  labels:
+    app: payment-query-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-query-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: payment-query-api
+      labels:
+        env: dev
+        app: payment-query-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: payment-query-api
+        image: steblynskyi-docker.jfrog.io/pms-payment-query-api:72645b7
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/pms/payment-query-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/pms/payment-query-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__centerDb
+          value: "Application Name=pms.payment.query.api;data source=sql-center.dev-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;pooling=true;connection lifetime=120;max pool size=3000"
+        - name: Kms__KeyArn
+          value: "arn:aws:kms:us-east-1:123:key/222-333-4149-817f-3333"
+        - name: CreditCardTokenUrl__EndPointUri
+          value: "https://payments-credit-card-token-api.dev-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: payment-query-api
+  namespace: pms
+  labels:
+    Domain: pms-payment-query-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: payment-query-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-query-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-query-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

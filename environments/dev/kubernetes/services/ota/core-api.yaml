@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-api
+  labels:
+    app: core-api
+    env: dev
+  namespace: ota
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: core-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: core-api
+      labels:
+        env: dev
+        app: core-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: core-api
+        image: steblynskyi-docker.jfrog.io/ota-core-api:273ac01bd
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 352Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+        - name: center_INNSYNC_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/innSyncDb/username"
+        - name: center_INNSYNC_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/innSyncDb/password"
+        - name: S3Buckets__ClientRentalAgreements__AccessKey
+          value: "vault:dev/data/aws/ota/core-api/aws_access_key_id"
+        - name: S3Buckets__ClientRentalAgreements__SecretKey
+          value: "vault:dev/data/aws/ota/core-api/aws_secret_access_key"
+        - name: ConnectionStrings__innSyncDb
+          value: "Server=sql-center.dev-steblynskyi.com;User Id=$(center_INNSYNC_DB_USERNAME);password=$(center_INNSYNC_DB_PASSWORD);Database=innSyncDb;MultipleActiveResultSets=True;Application Name=steblynskyi.Ota.Core;Encrypt=Optional;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: core-api
+  namespace: ota
+  labels:
+    Domain: ota-core-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: core-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: core-api
+  namespace: ota
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: core-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

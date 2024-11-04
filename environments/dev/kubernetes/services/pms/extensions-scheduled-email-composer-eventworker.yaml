@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-scheduled-email-composer-eventworker
+  labels:
+    app: extensions-scheduled-email-composer-eventworker
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: extensions-scheduled-email-composer-eventworker
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-scheduled-email-composer-eventworker
+      labels:
+        env: dev
+        app: extensions-scheduled-email-composer-eventworker
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-scheduled-email-composer-eventworker
+        image: steblynskyi-docker.jfrog.io/pms-extensions-scheduled-email-composer-eventworker:efc4626
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: MailSchedulerConfiguration__AWSRegion
+          value: us-east-1
+        - name: MailSchedulerConfiguration__AWSSecretKey
+          value: vault:dev/data/aws/pms/extensions-scheduled-email-composer-eventworker/aws_access_key_id
+        - name: MailSchedulerConfiguration__AWSAccessKey
+          value: vault:dev/data/aws/pms/extensions-scheduled-email-composer-eventworker/aws_secret_access_key
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__center
+          value: "Application Name=extensions-scheduled-email-composer;Server=sql-center.dev-steblynskyi.com;User Id=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;pooling=true;MultipleActiveResultSets=True;Max Pool Size=250;TrustServerCertificate=Yes;"

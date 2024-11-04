@@ -1,0 +1,120 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: integrations-ingress-internal
+  namespace: integrations
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/target-node-labels: kops.k8s.io/instancegroup=nodes
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/tags: Environment=DEV,Name=Integrations-Ingress-Internal
+    alb.ingress.kubernetes.io/subnets: subnet-1,subnet-2
+    alb.ingress.kubernetes.io/security-groups: sg-1
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-55555
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80,"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=false,access_logs.s3.bucket=steblynskyi-dev-access-logs,access_logs.s3.prefix=pc,deletion_protection.enabled=true,routing.http2.enabled=true,idle_timeout.timeout_seconds=120
+spec:
+  rules:
+  - host: integrations-google-booking-links-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: google-booking-links-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: integrations-google-booking-links-public-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: google-booking-links-public-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: integrations-google-booking-links-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: google-booking-links-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: integrations-lightspeed-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: lightspeed-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: integrations-lightspeed-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: lightspeed-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: integrations-lightspeed-background-processor.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: lightspeed-background-processor
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: integrations-googlebookinglinks-queue-processor.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: google-booking-links-queue-processor
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: integrations-email-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: email-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: integrations-email-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: email-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: integrations-email-internal-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: email-internal-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific

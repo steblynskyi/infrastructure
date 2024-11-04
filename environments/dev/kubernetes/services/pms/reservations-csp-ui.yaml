@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservations-csp-ui
+  labels:
+    app: reservations-csp-ui
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reservations-csp-ui
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: reservations-csp-ui
+      labels:
+        env: dev
+        app: reservations-csp-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: reservations-csp-ui
+        image: steblynskyi-docker.jfrog.io/pms-reservations-ui:8497f83dc
+        imagePullPolicy: Always
+        args:
+        - -base-path=/reservations
+        - -set-custom-header=content-security-policy:default-src 'self'
+        - -set-custom-header=content-security-policy:script-src 'self' 'sha256-02+9afqNibYP=' 56-bqnX1qMR/f/=' 'sha256-tys6f/=' 'sha256-/0qcaAkXMGM=' 'sha256=' 'unsafe-eval' https://www.googletagmanager.com https://js.stripe.com https://www.google-analytics.com *.dev-steblynskyi.com https://dev.virtualearth.net
+        - -set-custom-header=content-security-policy:style-src 'self' 'unsafe-inline' https://fonts.googleapis.com *.dev-steblynskyi.com
+        - -set-custom-header=content-security-policy:font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com data:;
+        - -set-custom-header=content-security-policy:connect-src *
+        - -set-custom-header=content-security-policy:img-src * data:; report-uri https://app.dev-steblynskyi.com/reservations/api/csp/log-csp-reports; frame-ancestors 'self'
+        - -set-custom-header=content-security-policy:frame-src 'self'; manifest-src 'none'; media-src 'none'; object-src 'none'; worker-src 'none'
+        - -set-custom-header=content-security-policy:base-uri https://csp.dev-steblynskyi.com
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_center_BASE_URL
+          value: https://app.dev-steblynskyi.com
+        - name: APP_RESERVATION_DASHBOARD_UI_URL
+          value: https://pms-reservations-dashboard-ui.dev-steblynskyi.com
+        - name: APP_PMS_center_API
+          value: https://pms-center-api.dev-steblynskyi.com/api/v1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: reservations-csp-ui
+  namespace: pms
+  labels:
+    Domain: pms-reservations-csp-ui.dev-steblynskyi.com
+spec:
+  selector:
+    app: reservations-csp-ui
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reservations-csp-ui
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reservations-csp-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -277,10 +277,10 @@ resource "aws_alb_listener_rule" "setup_lightspeed_https_rule" {
 }
 
 ##################################################################
-######## ALB listener rule and target group for Inncenter Web ########
-resource "aws_alb_target_group" "inncenter_web_tg" {
-  name     = local.inncenter_web
-  port     = local.inncenter_web_port
+######## ALB listener rule and target group for center Web ########
+resource "aws_alb_target_group" "center_web_tg" {
+  name     = local.center_web
+  port     = local.center_web_port
   protocol = "HTTP"
   vpc_id   = var.vpc_id
 
@@ -303,7 +303,7 @@ resource "aws_alb_target_group" "inncenter_web_tg" {
 }
 
 # Http listner rule : PORT 80
-resource "aws_alb_listener_rule" "inncenter_web_http_rule" {
+resource "aws_alb_listener_rule" "center_web_http_rule" {
   priority     = 153
   listener_arn = aws_lb_listener.alb_listner_http.arn
 
@@ -323,17 +323,17 @@ resource "aws_alb_listener_rule" "inncenter_web_http_rule" {
     }
   }
 
-  depends_on = [aws_lb.alb, aws_alb_target_group.inncenter_web_tg]
+  depends_on = [aws_lb.alb, aws_alb_target_group.center_web_tg]
 }
 
 # Https listner rule : PORT 443
-resource "aws_alb_listener_rule" "inncenter_web_https_rule" {
+resource "aws_alb_listener_rule" "center_web_https_rule" {
   priority     = 153
   listener_arn = aws_lb_listener.alb_listner_https.arn
 
   action {
     type             = "forward"
-    target_group_arn = aws_alb_target_group.inncenter_web_tg.arn
+    target_group_arn = aws_alb_target_group.center_web_tg.arn
   }
 
   condition {
@@ -342,7 +342,7 @@ resource "aws_alb_listener_rule" "inncenter_web_https_rule" {
     }
   }
 
-  depends_on = [aws_lb.alb, aws_alb_target_group.inncenter_web_tg]
+  depends_on = [aws_lb.alb, aws_alb_target_group.center_web_tg]
 }
 
 ##################################################################

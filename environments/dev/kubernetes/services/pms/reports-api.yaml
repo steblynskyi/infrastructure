@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reports-api
+  labels:
+    app: reports-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reports-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: reports-api
+      labels:
+        env: dev
+        app: reports-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: reports-api
+        image: steblynskyi-docker.jfrog.io/pms-reports-api:3816ecf3f
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 800m
+            memory: 1Gi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/pms/reports-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/pms/reports-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: REPORTS_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-innsights/reports/username"
+        - name: REPORTS_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-innsights/reports/password"
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: INNSIGHTS_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/username"
+        - name: INNSIGHTS_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/password"
+        - name: RESERVATION_GUESTPROFILE_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-reservation/guestprofile/username"
+        - name: RESERVATION_GUESTPROFILE_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-reservation/guestprofile/password"
+        - name: ConnectionStrings__ReportsReadOnly
+          value: "Host=innsights-read-replica-db.dev-steblynskyi.com;Database=reports;Username=$(REPORTS_DB_USERNAME);Password=$(REPORTS_DB_PASSWORD);Pooling=true;MaxPoolSize=250;Connection Idle Lifetime=180;Application Name=steblynskyi.Reports.Api;Max Auto Prepare=15;Write Buffer Size=16384;Read Buffer Size=16384;Include Error Detail=true;"
+        - name: ConnectionStrings__ReportsReadWrite
+          value: "Host=innsights-db.dev-steblynskyi.com;Database=reports;Username=$(REPORTS_DB_USERNAME);Password=$(REPORTS_DB_PASSWORD);Pooling=true;MaxPoolSize=250;Connection Idle Lifetime=180;Application Name=steblynskyi.Reports.Api;Max Auto Prepare=15;Write Buffer Size=16384;Read Buffer Size=16384;Include Error Detail=true;"
+        - name: ConnectionStrings__Hangfire
+          value: "Host=innsights-db.dev-steblynskyi.com;Database=reports;Username=$(REPORTS_DB_USERNAME);Password=$(REPORTS_DB_PASSWORD);Pooling=true;MaxPoolSize=250;Connection Idle Lifetime=300;Timeout=300;Application Name=steblynskyi.reports-api.hangfire;Max Auto Prepare=15;Write Buffer Size=16384;Read Buffer Size=16384;"
+        - name: ConnectionStrings__center
+          value: "Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_DB_USERNAME);password=$(center_DB_PASSWORD);Application Name=steblynskyi.Reports.Api;"
+        - name: EmailSettings__ConnectionString
+          value: "Host=innsights-db.dev-steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD);Pooling=true;MaxPoolSize=250;Connection Idle Lifetime=180;Timeout=180;CommandTimeout=180;Application Name=steblynskyi.reports.email;"
+        - name: ConnectionStrings__RedisCache
+          value: "redis.dev-steblynskyi.com"
+        - name: ConnectionStrings__GuestProfile
+          value: "Server=reservation-db.dev-steblynskyi.com;User Id=$(RESERVATION_GUESTPROFILE_DB_USERNAME);Password=$(RESERVATION_GUESTPROFILE_DB_PASSWORD);Database=guestprofile;Application Name=steblynskyi.Reports.Api;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: reports-api
+  namespace: pms
+  labels:
+    Domain: pms-reports-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: reports-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reports-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reports-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 980Mi

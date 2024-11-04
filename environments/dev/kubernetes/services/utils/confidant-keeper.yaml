@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  confidant-keeper
+  labels:
+    app: confidant-keeper
+    env: dev
+  namespace: utils
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: confidant-keeper
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: confidant-keeper
+      labels:
+        env: dev
+        app: confidant-keeper
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: confidant-keeper
+        image: lyft/confidant:6.3.0
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 8000
+          name: http
+        args:
+        - confidant.wsgi:app
+        - --workers=2
+        - -k
+        - gevent
+        - --access-logfile=-
+        - --error-logfile=-
+        - --forwarded-allow-ips=*
+        command:
+        - gunicorn
+        env:
+        - name: AWS_DEFAULT_REGION
+          value: us-east-1
+        - name: KMS_MASTER_KEY
+          value: alias/confidant-keeper-dev
+        - name: AWS_ACCESS_KEY_ID
+          value: vault:dev/data/aws/utils/confidant-keeper/aws_access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          value: vault:dev/data/aws/utils/confidant-keeper/aws_secret_access_key
+        - name: HOST
+          value: 0.0.0.0
+        - name: PORT
+          value: "8000"
+        - name: USE_AUTH
+          value: "true"
+        - name: DYNAMODB_TABLE
+          value: confidant-keeper-dev
+        - name: DYNAMODB_CREATE_TABLE
+          value: "true"
+        - name: SAML_CONFIDANT_URL_ROOT
+          value: https://utils-confidant-keeper.dev-steblynskyi.com/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: confidant-keeper
+  namespace: utils
+  labels:
+    Domain: utils-confidant-keeper.dev-steblynskyi.com
+spec:
+  selector:
+    app: confidant-keeper
+    env: dev
+  ports:
+  - port: 443
+    name: https
+    targetPort: 8000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: confidant-keeper
+  namespace: utils
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: confidant-keeper
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 320Mi

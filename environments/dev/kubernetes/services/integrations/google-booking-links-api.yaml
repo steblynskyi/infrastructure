@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: google-booking-links-api
+  labels:
+    app: google-booking-links-api
+    env: dev
+  namespace: integrations
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: google-booking-links-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: google-booking-links-api
+      labels:
+        env: dev
+        app: google-booking-links-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: google-booking-links-api
+        image: steblynskyi-docker.jfrog.io/integrations-google-booking-links-api:df860741
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+        - name: center_GBL_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/gbl/username"
+        - name: center_GBL_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/gbl/password"
+        - name: "ConnectionStrings__GblDb"
+          value: "Server=sql-center.dev-steblynskyi.com;Initial Catalog=GBL;User Id=$(center_GBL_DB_USERNAME); password=$(center_GBL_DB_PASSWORD);Connect Timeout=30;TrustServerCertificate=Yes;Application Name=google-booking-links-api;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: google-booking-links-api
+  namespace: integrations
+  labels:
+    Domain: integrations-google-booking-links-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: google-booking-links-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: google-booking-links-api
+  namespace: integrations
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: google-booking-links-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

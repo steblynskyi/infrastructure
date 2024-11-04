@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-authentication-api
+  labels:
+    app: extensions-authentication-api
+    env: dev
+  namespace: identity
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: extensions-authentication-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-authentication-api
+      labels:
+        app: extensions-authentication-api
+        env: dev
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-authentication-api
+        image: steblynskyi-docker.jfrog.io/identity-extensions-authentication-api:263e454
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+        - name: AWS_REGION
+          value: us-east-1
+        - name: AWS_ACCESS_KEY_ID
+          value: vault:dev/data/aws/identity/extensions-authentication-api/aws_access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          value: vault:dev/data/aws/identity/extensions-authentication-api/aws_secret_access_key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: extensions-authentication-api
+  namespace: identity
+  labels:
+    Domain: identity-extensions-authentication-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: extensions-authentication-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: extensions-authentication-api
+  namespace: identity
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: extensions-authentication-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

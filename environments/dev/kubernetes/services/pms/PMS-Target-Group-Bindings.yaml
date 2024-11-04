@@ -1,0 +1,335 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: rates-ui
+  namespace: pms
+  labels:
+    app: rates-ui
+    env: dev
+spec:
+  serviceRef:
+    name: rates-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Rates-UI-DEV/3a962b226a2eba53
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: inventory-api
+  namespace: pms
+  labels:
+    app: inventory-api
+    env: dev
+spec:
+  serviceRef:
+    name: inventory-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Inventory-Api-DEV/645e4d7daeb6e886
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: guest-web
+  namespace: pms
+  labels:
+    app: guest-web
+    env: dev
+spec:
+  serviceRef:
+    name: guest-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/GuestServices-UI-DEV/109ba12342f6a51a
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: center-web-setup-ledger-account
+  namespace: pms
+  labels:
+    app: center-web
+    env: dev
+spec:
+  serviceRef:
+    name: center-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Setup-Ledger-Account-DEV/ff1360390a11a507
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: center-web
+  namespace: pms
+  labels:
+    app: center-web
+    env: dev
+spec:
+  serviceRef:
+    name: center-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/center-Web-DEV/ce8d0c746c5a4a4f
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: custom-fields-ui
+  namespace: pms
+  labels:
+    app: custom-fields-ui
+    env: dev
+spec:
+  serviceRef:
+    name: custom-fields-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Setup-Fields-Configuration-DEV/97c6811529ab48e4
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: admin-ui
+  namespace: pms
+  labels:
+    app: admin-ui
+    env: dev
+spec:
+  serviceRef:
+    name: admin-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Admin-UI-DEV/7f438f7df725063f
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: center-web-admin-clients-ui
+  namespace: pms
+  labels:
+    app: center-web
+    env: dev
+spec:
+  serviceRef:
+    name: center-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Admin-Clients-UI-DEV/ad99bc4eeece0f11
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: reports-api
+  namespace: pms
+  labels:
+    app: reports-api
+    env: dev
+spec:
+  serviceRef:
+    name: reports-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reports-API-DEV/cb90f69a862b61d1
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: reports-ui
+  namespace: pms
+  labels:
+    app: reports-ui
+    env: dev
+spec:
+  serviceRef:
+    name: reports-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reports-UI-DEV/119de31303bc1a13
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: folio-api
+  namespace: pms
+  labels:
+    app: folio-api
+    env: dev
+spec:
+  serviceRef:
+    name: folio-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Folio-API-DEV/7672b3f5f3898c8c
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: taxes-ui
+  namespace: pms
+  labels:
+    app: taxes-ui
+    env: dev
+spec:
+  serviceRef:
+    name: taxes-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Taxes-UI-DEV/6a16fda3a8be903c
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: innsights-web-api
+  namespace: pms
+  labels:
+    app: innsights-web-api
+    env: dev
+spec:
+  serviceRef:
+    name: innsights-web-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Innsights-Web-API-DEV/fa94b8e74ae8f6be
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: reservations-ui
+  namespace: pms
+  labels:
+    app: reservations-ui
+    env: dev
+spec:
+  serviceRef:
+    name: reservations-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reservations-UI-DEV/f60d718804e63212
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: reservations-blocks-ui
+  namespace: pms
+  labels:
+    app: reservations-blocks-ui
+    env: dev
+spec:
+  serviceRef:
+    name: reservations-blocks-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reservations-Blocks-UI-DEV/c0427f5260906334
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: reservations-api
+  namespace: pms
+  labels:
+    app: reservations-api
+    env: dev
+spec:
+  serviceRef:
+    name: reservations-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reservations-API-DEV/3eb856862c7434a8
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: quickbooks-web
+  namespace: pms
+  labels:
+    app: quickbooks-web
+    env: dev
+spec:
+  serviceRef:
+    name: quickbooks-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Quickbooks-WEB-DEV/207575fb983685a1
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: messaging-ui
+  namespace: pms
+  labels:
+    app: messaging-ui
+    env: dev
+spec:
+  serviceRef:
+    name: messaging-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Messaging-UI-DEV/130c02e79c0eccce
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: unit-owners-api
+  namespace: pms
+  labels:
+    app: unit-owners-api
+    env: dev
+spec:
+  serviceRef:
+    name: unit-owners-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Unit-Owners-API-DEV/e0b0e508786f5b6b
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: messaging-api
+  namespace: pms
+  labels:
+    app: messaging-api
+    env: dev
+spec:
+  serviceRef:
+    name: messaging-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Messaging-API-DEV/9b29d28f4acc123e
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: reservations-csp-ui
+  namespace: pms
+  labels:
+    app: reservations-csp-ui
+    env: dev
+spec:
+  serviceRef:
+    name: reservations-csp-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reports-CSP-UI-DEV/7a467bf4e834bc92
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: accounts-ui
+  namespace: pms
+  labels:
+    app: accounts-ui
+    env: dev
+spec:
+  serviceRef:
+    name: accounts-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Accounts-UI-DEV/7e37c30f29cbb472
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: extensions-remotelock-web
+  namespace: pms
+  labels:
+    app: extensions-remotelock-web
+    env: dev
+spec:
+  serviceRef:
+    name: extensions-remotelock-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Extensions-Remote-Lock-Web-DEV/7b6b8978b154cb34
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: extensions-templates-web
+  namespace: pms
+  labels:
+    app: extensions-templates-web
+    env: dev
+spec:
+  serviceRef:
+    name: extensions-templates-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Extensions-Templates-Web-DEV/ccee45805b1c818b

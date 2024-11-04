@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: across-systems-user-tracker
+  labels:
+    app: across-systems-user-tracker
+    env: dev
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: across-systems-user-tracker
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: across-systems-user-tracker
+      labels:
+        app: across-systems-user-tracker
+        env: dev
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: across-systems-user-tracker
+          image: steblynskyi-docker.jfrog.io/ops-across-systems-user-tracker:17b0bce
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: "Logging__LogLevel__Default"
+              value: "Information"
+            - name: "Logging__LogLevel__Microsoft"
+              value: "Warning"
+            - name: "Logging__LogLevel__Microsoft.Hosting.Lifetime"
+              value: "Information"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: across-systems-user-tracker
+  namespace: ops
+  labels:
+    Domain: ops-across-systems-user-tracker.dev-steblynskyi.com
+spec:
+  selector:
+    app: across-systems-user-tracker
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: across-systems-user-tracker
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: across-systems-user-tracker
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-api
+  labels:
+    app: email-api
+    env: dev
+  namespace: integrations
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: email-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: email-api
+      labels:
+        env: dev
+        app: email-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: email-api
+        image: steblynskyi-docker.jfrog.io/integrations-email-api:a0b4162
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/integrations/email-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/integrations/email-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: AttachmentSettings__BucketName
+          value: "steblynskyi-dev-integrations-email-attachments"
+        - name: center_EMAILDISPATCH_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/emaildispatch/username"
+        - name: center_EMAILDISPATCH_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/emaildispatch/password"
+        - name: ConnectionStrings__EmailDb
+          value: "Application Name=steblynskyi.Integrations.Email.Api;Server=sql-center.dev-steblynskyi.com;User Id=$(center_EMAILDISPATCH_DB_USERNAME);password=$(center_EMAILDISPATCH_DB_PASSWORD);Database=EmailDispatch;MultipleActiveResultSets=True;Encrypt=Optional;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: email-api
+  namespace: integrations
+  labels:
+    Domain: integrations-email-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: email-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: email-api
+  namespace: integrations
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: email-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -17,8 +17,8 @@
             "Principal": {
                 "AWS": [
                     "arn:aws:iam::123:user/identity-api-dev",
-                    "arn:aws:iam::123:user/pms-inncenter-api-dev",
-                    "arn:aws:iam::123:user/pms-inncenter-internal-api-dev"
+                    "arn:aws:iam::123:user/pms-center-api-dev",
+                    "arn:aws:iam::123:user/pms-center-internal-api-dev"
                 ]
             },
             "Action": [
@@ -36,8 +36,8 @@
             "Principal": {
                 "AWS": [
                     "arn:aws:iam::123:user/identity-api-dev",
-                    "arn:aws:iam::123:user/pms-inncenter-api-dev",
-                    "arn:aws:iam::123:user/pms-inncenter-internal-api-dev"
+                    "arn:aws:iam::123:user/pms-center-api-dev",
+                    "arn:aws:iam::123:user/pms-center-internal-api-dev"
                 ]
             },
             "Action": [

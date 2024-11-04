@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: setup-web
+  labels:
+    app: setup-web
+    env: dev
+  namespace: ota
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: setup-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: setup-web
+      labels:
+        env: dev
+        app: setup-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: setup-web
+        image: steblynskyi-docker.jfrog.io/ota-setup-web:c3555640
+        imagePullPolicy: Always
+        args:
+        - -base-path=/setup
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_center_API_BASE_URL
+          value: "https://app.dev-steblynskyi.com"
+        - name: APP_JWT_AUTH_BASE_URL
+          value: "https://be-auth-jwt-api.dev-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: setup-web
+  namespace: ota
+  labels:
+    Domain: ota-setup-web.dev-steblynskyi.com
+spec:
+  selector:
+    app: setup-web
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: setup-web
+  namespace: ota
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: setup-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

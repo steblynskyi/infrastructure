@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  folio-automated-test-web
+  labels:
+    app: folio-automated-test-web
+    env: dev
+  namespace: utils
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: folio-automated-test-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: folio-automated-test-web
+      labels:
+        env: dev
+        app: folio-automated-test-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: folio-automated-test-web
+        image: steblynskyi-docker.jfrog.io/utils-folio-automated-test-web:4c13ec2
+        imagePullPolicy: Always
+        resources:
+          requests:
+             cpu: 75m
+             memory: 64Mi
+          limits:
+             cpu: 250m
+             memory: 500Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+        - name: "DetailedErrors"
+          value: "True"
+        - name: "Logging__LogLevel__Default"
+          value: "Information"
+        - name: "Logging__LogLevel__Microsoft"
+          value: "Warning"
+        - name: "Logging__LogLevel__Microsoft.Hosting.Lifetime"
+          value: "Information"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: folio-automated-test-web
+  namespace: utils
+  labels:
+    Domain: utils-folio-automated-test-web.dev-steblynskyi.com
+spec:
+  selector:
+    app: folio-automated-test-web
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: folio-automated-test-web
+  namespace: utils
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: folio-automated-test-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

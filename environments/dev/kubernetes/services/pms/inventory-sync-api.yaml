@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-sync-api
+  labels:
+    app: inventory-sync-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: inventory-sync-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: inventory-sync-api
+      labels:
+        env: dev
+        app: inventory-sync-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: inventory-sync-api
+        image: steblynskyi-docker.jfrog.io/pms-inventory-sync-api:a3afa3195
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 350m
+            memory: 1Gi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/pms/inventory-sync-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/pms/inventory-sync-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: INNSIGHTS_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/username"
+        - name: INNSIGHTS_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/password"
+        - name: RESERVATION_RATEENGINE_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-reservation/rateengine/username"
+        - name: RESERVATION_RATEENGINE_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-reservation/rateengine/password"
+        - name: center_RATESAPI_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/ratesapi/username"
+        - name: center_RATESAPI_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/ratesapi/password"
+        - name: ConnectionStrings__center
+          value: "Application Name=pms-inventory-sync-api;Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_RATESAPI_DB_USERNAME);Password=$(center_RATESAPI_DB_PASSWORD);TrustServerCertificate=true;"
+        - name: ConnectionStrings__RateEngine
+          value: "Application Name=pms-inventory-sync-api;User ID=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD);Server=reservation-db.dev-steblynskyi.com;Database=rateengine;"
+        - name: ConnectionStrings__History
+          value: "Application Name=pms-inventory-sync-api;Server=reservation-db.dev-steblynskyi.com;User Id=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD);Database=rateengine;"
+        - name: ConnectionStrings__InnSights
+          value: "Application Name=pms-inventory-sync-api;Host=innsights-db.dev-steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD);"
+        - name: DistributedCache_RedisCache
+          value: "redis.dev-steblynskyi.com"
+        - name: ToggleService_URL
+          value: "https://be-core-api.dev-steblynskyi.com"
+        - name: EventNotificationConfiguration_CoreApiUrl
+          value: "https://be-core-api.dev-steblynskyi.com"
+        - name: EmailService__UserName
+          value: "vault:dev/data/aws/pms/center-smtp/aws_access_key_id"
+        - name: EmailService__Password
+          value: "vault:dev/data/aws/pms/center-smtp/aws_secret_access_key"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /status
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: inventory-sync-api
+  namespace: pms
+  labels:
+    Domain: pms-inventory-sync-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: inventory-sync-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inventory-sync-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inventory-sync-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 980Mi

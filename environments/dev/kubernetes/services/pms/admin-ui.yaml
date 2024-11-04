@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-ui
+  labels:
+    app: admin-ui
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: admin-ui
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: admin-ui
+      labels:
+        env: dev
+        app: admin-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: admin-ui
+        image: steblynskyi-docker.jfrog.io/pms-admin-ui:1146b56
+        imagePullPolicy: Always
+        args:
+        - -base-path=/admin
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_center_API_BASE_URL
+          value: "https://app.dev-steblynskyi.com/"
+        - name: APP_PMS_center_API
+          value: "https://pms-center-api.dev-steblynskyi.com/api/v1"
+        - name: APP_JWT_AUTH_BASE_URL
+          value: "https://be-auth-jwt-api.dev-steblynskyi.com/api/v1"
+        - name: APP_RESERVATION_API_BASE_URL
+          value: "https://app.dev-steblynskyi.com/reservations/api"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: admin-ui
+  namespace: pms
+  labels:
+    Domain: pms-admin-ui.dev-steblynskyi.com
+spec:
+  selector:
+    app: admin-ui
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: admin-ui
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: admin-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

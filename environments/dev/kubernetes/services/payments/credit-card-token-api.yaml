@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credit-card-token-api
+  labels:
+    app: credit-card-token-api
+    env: dev
+  namespace: payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: credit-card-token-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: credit-card-token-api
+      labels:
+        env: dev
+        app: credit-card-token-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: credit-card-token-api
+        image: steblynskyi-docker.jfrog.io/payments-credit-card-token-api:b4f99ff
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 352Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: "ConnectionStrings__CreditCardToken"
+          value: "Application Name=steblynskyi.Payments.CreditCardToken.Api;Server=sql-center.dev-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Database=center01p;MultipleActiveResultSets=True;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: credit-card-token-api
+  namespace: payments
+  labels:
+    Domain: payments-credit-card-token-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: credit-card-token-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: credit-card-token-api
+  namespace: payments
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: credit-card-token-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

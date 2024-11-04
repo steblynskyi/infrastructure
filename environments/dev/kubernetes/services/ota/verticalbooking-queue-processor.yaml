@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verticalbooking-queue-processor
+  labels:
+    app: verticalbooking-queue-processor
+    env: dev
+  namespace: ota
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: verticalbooking-queue-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: verticalbooking-queue-processor
+      labels:
+        env: dev
+        app: verticalbooking-queue-processor
+      annotations:
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: verticalbooking-queue-processor
+        image: steblynskyi-docker.jfrog.io/ota-verticalbooking-queue-processor:273ac01bd
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+          - containerPort: 9464
+            name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+        - name: center_INNSYNC_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/innSyncDb/username"
+        - name: center_INNSYNC_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/innSyncDb/password"
+        - name: ConnectionStrings__innSyncDb
+          value: "Server=sql-center.dev-steblynskyi.com;User Id=$(center_INNSYNC_DB_USERNAME);password=$(center_INNSYNC_DB_PASSWORD);Database=innSyncDb;MultipleActiveResultSets=True;Application Name=Ota.VerticalBooking.QueueProcessor;Encrypt=Optional;"
+        - name: EndPoints__PmsApi
+          value: "https://be-core-api.dev-steblynskyi.com"

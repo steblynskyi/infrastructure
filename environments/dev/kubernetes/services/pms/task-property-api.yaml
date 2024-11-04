@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-property-api
+  labels:
+    app: task-property-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: task-property-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: task-property-api
+      labels:
+        env: dev
+        app: task-property-api
+      annotations:
+        fluentbit-logger: "true"
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: task-property-api
+        image: steblynskyi-docker.jfrog.io/pms-task-property-api:afe8cdc
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 384Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: INN_center_DB_HOST
+          value: sql-center.dev-steblynskyi.com
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: RESERVATION_GUESTSERVICES_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-reservation/guestservices/username"
+        - name: RESERVATION_GUESTSERVICES_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-reservation/guestservices/password"
+        - name: INN_center_DB_NAME
+          value: center01p
+        - name: INN_center_DB_PASSWORD
+          value: $(center_DB_PASSWORD)
+        - name: INN_center_DB_USER
+          value: $(center_DB_USERNAME)
+        - name: INN_AWS_APP_KEY
+          value: "vault:dev/data/aws/pms/task-property-api/aws_access_key_id"
+        - name: INN_AWS_SECRET_KEY
+          value: "vault:dev/data/aws/pms/task-property-api/aws_secret_access_key"
+        - name: INN_AWS_REGION
+          value: us-east-1
+        - name: INN_GUEST_SERVICES_DB_USER
+          value: $(RESERVATION_GUESTSERVICES_DB_USERNAME)
+        - name: INN_GUEST_SERVICES_DB_PASSWORD
+          value: $(RESERVATION_GUESTSERVICES_DB_PASSWORD)
+        - name: INN_GUEST_SERVICES_DB_HOST
+          value: reservation-db.dev-steblynskyi.com
+        - name: INN_GUEST_SERVICES_DB_NAME
+          value: guestservices
+        - name: INN_LOG_FLUENT_HOST
+          value: utils-fluentd-logging.dev-steblynskyi.com
+        - name: INN_LOG_LEVEL
+          value: DEBUG
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: task-property-api
+  namespace: pms
+  labels:
+    Domain: pms-task-property-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: task-property-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: task-property-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: task-property-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 120m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 350Mi

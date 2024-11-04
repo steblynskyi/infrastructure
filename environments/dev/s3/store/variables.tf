@@ -25,7 +25,7 @@ variable "terraform" {
 
 variable "s3_name" {
   description = "Default name of S3 bucket"
-  default     = "steblynskyi-dev-store-inncenter"
+  default     = "steblynskyi-dev-store-center"
 }
 
 variable "acl" {

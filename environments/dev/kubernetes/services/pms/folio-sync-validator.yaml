@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: folio-sync-validator
+  labels:
+    app: folio-sync-validator
+    env: dev
+  namespace: pms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: folio-sync-validator
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: folio-sync-validator
+      labels:
+        env: dev
+        app: folio-sync-validator
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: folio-sync-validator
+        image: steblynskyi-docker.jfrog.io/pms-folio-sync-validator:5f6fbc202
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development

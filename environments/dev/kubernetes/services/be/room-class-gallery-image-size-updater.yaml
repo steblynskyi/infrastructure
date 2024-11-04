@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: room-class-gallery-image-size-updater
+  labels:
+    app: room-class-gallery-image-size-updater
+    env: dev
+  namespace: be
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: room-class-gallery-image-size-updater
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: room-class-gallery-image-size-updater
+      labels:
+        env: dev
+        app: room-class-gallery-image-size-updater
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: room-class-gallery-image-size-updater
+        image: steblynskyi-docker.jfrog.io/be-room-class-gallery-image-size-updater:2c32dd0
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: "AppSettings__ImageSettings__ClientSiteDomain"
+          value: "https://app.dev-steblynskyi.com"
+        - name: "ConnectionStrings__centerDb"
+          value: "Server=sql-center.dev-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;pooling=true;MultipleActiveResultSets=True;Application Name=steblynskyi.RoomClassGallery.ImageSizeUpdater;Max Pool Size=250;"

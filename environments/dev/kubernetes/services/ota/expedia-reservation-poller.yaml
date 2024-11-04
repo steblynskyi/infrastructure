@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: expedia-reservation-poller
+  labels:
+    app: expedia-reservation-poller
+    env: dev
+  namespace: ota
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: expedia-reservation-poller
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: expedia-reservation-poller
+      labels:
+        env: dev
+        app: expedia-reservation-poller
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: expedia-reservation-poller
+        image: steblynskyi-docker.jfrog.io/ota-expedia-reservation-poller:6e3a7c9
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 250Mi
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+        - name: Endpoints__OtaCoreApi
+          value: "https://ota-core-api.dev-steblynskyi.com"
+        - name: Endpoints__PmsCoreApi
+          value: "https://be-core-api.dev-steblynskyi.com"
+        - name: VerticalBooking__Cors__Origins__0
+          value: "http://localhost:8080"
+        - name: VerticalBooking__Cors__Origins__1
+          value: "http://localhost"
+        - name: VerticalBooking__Cors__Origins__2
+          value: "https://localhost"
+        - name: VerticalBooking__Cors__Origins__3
+          value: "https://localhost:8081"
+        - name: VerticalBooking__Cors__Origins__4
+          value: "https://support-web.dev-steblynskyi.com"

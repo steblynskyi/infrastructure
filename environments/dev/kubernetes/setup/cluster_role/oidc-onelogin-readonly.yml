@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: oidc-onelogin-readonly
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["watch","list"]
+- apiGroups: ["*"]
+  resources: ["pods","pods/log"]
+  verbs: ["get","watch","list"]
+- nonResourceURLs: ["*"]
+  verbs: ["watch","list"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: oidc-onelogin-readonly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: oidc-onelogin-readonly
+subjects:
+- kind: Group
+  name: "Kubernetes ReadOnly"

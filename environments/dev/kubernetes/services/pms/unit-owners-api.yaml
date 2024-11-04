@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unit-owners-api
+  labels:
+    app: unit-owners-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: unit-owners-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: unit-owners-api
+      labels:
+        env: dev
+        app: unit-owners-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+        steblynskyi.io/scrape: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: unit-owners-api
+        image: steblynskyi-docker.jfrog.io/pms-unit-owners-api:29b42f71
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /unit-owners/health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /unit-owners/health/status
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 800m
+            memory: 1Gi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: DEV
+        - name: UNITOWNERS_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-reservation/unitowners/username"
+        - name: UNITOWNERS_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-reservation/unitowners/password"
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/pms/unit-owners-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/pms/unit-owners-api/aws_secret_access_key"
+        - name: AWS_DEFAULT_REGION
+          value: us-east-1
+        - name: ConnectionStrings__UnitOwners
+          value: "Host=reservation-db.dev-steblynskyi.com;Database=unitowners;Username=$(UNITOWNERS_DB_USERNAME);Password=$(UNITOWNERS_DB_PASSWORD);Pooling=true;MaxPoolSize=250;Connection Idle Lifetime=300;Timeout=300;Application Name=steblynskyi.UnitOwners.Api;"
+        - name: ConnectionStrings__center
+          value: "Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_DB_USERNAME); password=$(center_DB_PASSWORD);connection lifetime=180;Connect Timeout=60;Application Name=steblynskyi.UnitOwners.Api;"
+        - name: RedisCache__ConnectionString
+          value: redis.dev-steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /unit-owners/health/live
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: unit-owners-api
+  namespace: pms
+  labels:
+    Domain: pms-unit-owners-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: unit-owners-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: unit-owners-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: unit-owners-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 980Mi

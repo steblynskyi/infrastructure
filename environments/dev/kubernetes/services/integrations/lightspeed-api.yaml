@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lightspeed-api
+  labels:
+    app: lightspeed-api
+    env: dev
+  namespace: integrations
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: lightspeed-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: lightspeed-api
+      labels:
+        env: dev
+        app: lightspeed-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: lightspeed-api
+        image: steblynskyi-docker.jfrog.io/integrations-lightspeed-api:d6ad0e6
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+        - name: center_LIGHTSPEED_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/Lightspeed/username"
+        - name: center_LIGHTSPEED_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/Lightspeed/password"
+        - name: "ConnectionStrings__Lightspeed"
+          value: "Application Name=steblynskyi.Integrations.Lightspeed.Api;Server=sql-center.dev-steblynskyi.com;User Id=$(center_LIGHTSPEED_DB_USERNAME);password=$(center_LIGHTSPEED_DB_PASSWORD);Database=Lightspeed;MultipleActiveResultSets=True;"
+        - name: "Endpoints__PmsCoreApi"
+          value: "https://be-core-api.dev-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: lightspeed-api
+  namespace: integrations
+  labels:
+    Domain: integrations-lightspeed-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: lightspeed-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: lightspeed-api
+  namespace: integrations
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: lightspeed-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 240Mi

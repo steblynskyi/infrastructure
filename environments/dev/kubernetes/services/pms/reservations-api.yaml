@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservations-api
+  labels:
+    app: reservations-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reservations-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: reservations-api
+      labels:
+        env: dev
+        app: reservations-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+        steblynskyi.io/scrape: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: reservations-api
+        image: steblynskyi-docker.jfrog.io/pms-reservations-api:321d130db
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 384Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: DEV
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/pms/reservations-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/pms/reservations-api/aws_secret_access_key"
+        - name: AWS_DEFAULT_REGION
+          value: us-east-1
+        - name: center_RESERVATION_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/reservation/username"
+        - name: center_RESERVATION_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/reservation/password"
+        - name: RESERVATION_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-reservation/reservation/username"
+        - name: RESERVATION_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-reservation/reservation/password"
+        - name: RESERVATION_GUESTPROFILE_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-reservation/guestprofile/username"
+        - name: RESERVATION_GUESTPROFILE_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-reservation/guestprofile/password"
+        - name: INNSIGHTS_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/username"
+        - name: INNSIGHTS_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/password"
+        - name: ConnectionStrings__center
+          value: Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_RESERVATION_DB_USERNAME); password=$(center_RESERVATION_DB_PASSWORD);Connect Timeout=60; Application Name=pms-reservation-api;TrustServerCertificate=True
+        - name: ConnectionStrings__Reservation
+          value: Server=reservation-db.dev-steblynskyi.com;User Id=$(RESERVATION_DB_USERNAME);Password=$(RESERVATION_DB_PASSWORD);Database=reservation; Application Name=pms-reservation-api;
+        - name: ConnectionStrings__GuestProfile
+          value: Server=reservation-db.dev-steblynskyi.com;User Id=$(RESERVATION_GUESTPROFILE_DB_USERNAME);Password=$(RESERVATION_GUESTPROFILE_DB_PASSWORD);Database=guestprofile;Application Name=pms-reservation-api;
+        - name: ConnectionStrings__Hangfire
+          value: Server=reservation-db.dev-steblynskyi.com;User Id=$(RESERVATION_GUESTPROFILE_DB_USERNAME);Password=$(RESERVATION_GUESTPROFILE_DB_PASSWORD);Database=guestprofile;Application Name=pms-reservation-api;
+        - name: EmailSettings__ConnectionString
+          value: "Host=innsights-db.dev-steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD);Pooling=true;MaxPoolSize=250;Connection Idle Lifetime=180;Timeout=180;CommandTimeout=180;Application Name=pms-reservation-api;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: reservations-api
+  namespace: pms
+  labels:
+    Domain: pms-reservations-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: reservations-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reservations-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reservations-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 320Mi

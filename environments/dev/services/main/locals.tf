@@ -66,8 +66,8 @@ locals {
   setup_lightspeed      = "${var.setup_lightspeed}-${var.environment}"
   setup_lightspeed_port = var.setup_lightspeed_port
 
-  inncenter_web      = "${var.inncenter_web}-${var.environment}"
-  inncenter_web_port = var.inncenter_web_port
+  center_web      = "${var.center_web}-${var.environment}"
+  center_web_port = var.center_web_port
 
   setup_merchant_services      = "${var.setup_merchant_services}-${var.environment}"
   setup_merchant_services_port = var.setup_merchant_services_port

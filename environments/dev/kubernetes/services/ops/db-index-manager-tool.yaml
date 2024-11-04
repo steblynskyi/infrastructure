@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db-index-manager-tool
+  labels:
+    app: db-index-manager-tool
+    env: dev
+  namespace: ops
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: db-index-manager-tool
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: db-index-manager-tool
+      labels:
+        app: db-index-manager-tool
+        env: dev
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: db-index-manager-tool
+          image: steblynskyi-docker.jfrog.io/ops-db-index-manager-tool:09bc797
+          imagePullPolicy: Always
+          resources:
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Development
+            - name: "Logging__LogLevel__Default"
+              value: "Information"
+            - name: "Logging__LogLevel__Microsoft"
+              value: "Warning"
+            - name: "Logging__LogLevel__Microsoft.Hosting.Lifetime"
+              value: "Information"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: db-index-manager-tool
+  namespace: ops
+  labels:
+    Domain: ops-db-index-manager-tool.dev-steblynskyi.com
+spec:
+  selector:
+    app: db-index-manager-tool
+    env: dev
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: db-index-manager-tool
+  namespace: ops
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: db-index-manager-tool
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

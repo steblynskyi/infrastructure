@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guest-web-api
+  labels:
+    app: guest-web-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: guest-web-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: guest-web-api
+      labels:
+        env: dev
+        app: guest-web-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: guest-web-api
+        image: steblynskyi-docker.jfrog.io/pms-guest-web-api:e6abf62
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        resources:
+          requests:
+            memory: 32Mi
+            cpu: 25m
+          limits:
+            memory: 256Mi
+            cpu: 1000m
+        env:
+        - name: INN_RESERVATION_API_URL
+          value: "https://pms-reservation-query-api.dev-steblynskyi.com/api/v1"
+        - name: INN_ACCOUNT_API_URL
+          value: "https://pms-account-query-api.dev-steblynskyi.com/api/v1"
+        - name: INN_PROPERTY_API_URL
+          value: "https://pms-property-api.dev-steblynskyi.com/api/v2"
+        - name: INN_CLIENT_API_URL
+          value: "https://pms-client-api.dev-steblynskyi.com/api/v1"
+        - name: TASK_CATEGORY_API_URL
+          value: "https://pms-task-category-api.dev-steblynskyi.com"
+        - name: TASK_COMMAND_API_URL
+          value: "https://pms-task-command-api.dev-steblynskyi.com"
+        - name: TASK_QUERY_API_URL
+          value: "https://pms-task-query-api.dev-steblynskyi.com"
+        - name: TASK_PROPERTY_API_URL
+          value: "https://pms-task-property-api.dev-steblynskyi.com"
+        - name: GUEST_SERVICE_NAVIGATION_API_URL
+          value: "https://pms-guest-navigation-api.dev-steblynskyi.com"
+        - name: INN_AVAILABILITY_API_URL
+          value: "https://pms-inventory-availability-api.dev-steblynskyi.com/api/v1"
+        - name: HOUSEKEEPING_API_URL
+          value: "https://pms-housekeeping-room-api.dev-steblynskyi.com"
+        - name: APP_LOG_TAG
+          value: "Pms.Guest.Web.Api"
+        - name: LOG_FLUENT_HOST
+          value: "utils-fluentd-logging.dev-steblynskyi.com"
+        - name: LOG_FLUENT_PORT
+          value: "24224"
+        - name: ORIGINS
+          value: "https://app.dev-steblynskyi.com"
+        - name: INN_SERVICES_API_URL
+          value: "https://app.dev-steblynskyi.com/steblynskyiServices"
+        - name: NODE_ENV
+          value: "dev"
+        - name: AWS_ACCESS_KEY_ID
+          value: vault:dev/data/aws/pms/guest-web-api/aws_access_key_id
+        - name: AWS_SECRET_KEY
+          value: vault:dev/data/aws/pms/guest-web-api/aws_secret_access_key
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: AWS_LOG_GROUP
+          value: "dev/gs/pms-guest-web-api"
+        - name: LOG_LEVEL
+          value: "DEBUG"
+        - name: FLUENT_LOG_LEVEL
+          value: "DEBUG"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: guest-web-api
+  namespace: pms
+  labels:
+    Domain: pms-guest-web-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: guest-web-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 3000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: guest-web-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: guest-web-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

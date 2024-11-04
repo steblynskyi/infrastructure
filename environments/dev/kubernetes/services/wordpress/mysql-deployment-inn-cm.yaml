@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: wordpress
+  name: wordpress-mysql-inn-cm
+  labels:
+    app: wordpress-inn-cm
+spec:
+  ports:
+    - port: 3306
+  selector:
+    app: wordpress-inn-cm
+    tier: mysql
+  clusterIP: None
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: wordpress
+  name: mysql-pv-claim-inn-cm
+  labels:
+    app: wordpress-inn-cm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 25Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: wordpress
+  name: wordpress-mysql-inn-cm
+  labels:
+    app: wordpress-inn-cm
+spec:
+  selector:
+    matchLabels:
+      app: wordpress-inn-cm
+      tier: mysql
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: wordpress-inn-cm
+        tier: mysql
+    spec:
+      containers:
+        - image: mysql:8.0
+          name: mysql-inn-cm
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: here
+          ports:
+            - containerPort: 3306
+              name: mysql
+          volumeMounts:
+            - name: mysql-persistent-storage-inn-cm
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-persistent-storage-inn-cm
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim-inn-cm

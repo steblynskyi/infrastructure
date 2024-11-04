@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  logging
+  labels:
+    app: logging
+    env: dev
+  namespace: utils
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: logging
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: logging
+      labels:
+        env: dev
+        app: logging
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: logging
+        image: steblynskyi-docker.jfrog.io/devops-logging:v1.1
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 24224
+          name: http
+        env:
+        - name: INN_ELASTICSEARCH_ENDPOINT
+          value: here
+        - name: INN_ELASTICSEARCH_REGION
+          value: us-east-1
+        - name: AWS_ACCESS_KEY_ID
+          value: vault:dev/data/aws/utils/logging-elasticsearch/aws_access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          value: vault:dev/data/aws/utils/logging-elasticsearch/aws_secret_access_key
+        - name: INN_ENVIRONMENT
+          value: DEV
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: logging
+  namespace: utils
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "Name=Fluentd-Log"
+    service.beta.kubernetes.io/aws-load-balancer-security-groups: sg-09b59f856490bbf5e
+    service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-085b2e673568d83eb,subnet-03916b6451a44e7c0
+    external-dns.alpha.kubernetes.io/hostname: utils-fluentd-logging.dev-steblynskyi.com
+spec: 
+  ports: 
+  - port: 24224
+    name: fluentd
+    targetPort: 24224
+    protocol: TCP
+  selector: 
+    app: logging
+    env: dev
+  type: LoadBalancer
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: logging
+  namespace: utils
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: logging
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

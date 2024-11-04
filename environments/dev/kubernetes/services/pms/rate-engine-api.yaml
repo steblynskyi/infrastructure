@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rate-engine-api
+  labels:
+    app: rate-engine-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rate-engine-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: rate-engine-api
+      labels:
+        env: dev
+        app: rate-engine-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: rate-engine-api
+        image: steblynskyi-docker.jfrog.io/pms-rate-engine-api:2ce41eb46
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 384Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 81
+          name: http2
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/pms/rate-engine-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/pms/rate-engine-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: center_RATES_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/ratesapi/username"
+        - name: center_RATES_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/ratesapi/password"
+        - name: INNSIGHTS_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/username"
+        - name: INNSIGHTS_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-innsights/innSights/password"
+        - name: RESERVATION_RATEENGINE_DB_USERNAME
+          value: "vault:dev/data/rds/postgresql-reservation/rateengine/username"
+        - name: RESERVATION_RATEENGINE_DB_PASSWORD
+          value: "vault:dev/data/rds/postgresql-reservation/rateengine/password"
+        - name: ConnectionStrings__History
+          value: "Application Name=pms-rate-engine-api;Server=reservation-db.dev-steblynskyi.com;User Id=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD);Database=rateengine;"
+        - name: ConnectionStrings__InnSights
+          value: "Application Name=pms-rate-engine-api;Host=innsights-db.dev-steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD);"
+        - name: ConnectionStrings__Inventory
+          value: "Application Name=pms-rate-engine-api;Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_RATES_DB_USERNAME);Password=$(center_RATES_DB_PASSWORD); TrustServerCertificate=true;"
+        - name: ConnectionStrings__RateEngine
+          value: "Application Name=pms-rate-engine-api;User ID=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD);Server=reservation-db.dev-steblynskyi.com;Database=rateengine;"
+        - name: DistributionCache__RedisCache
+          value: "redis.dev-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: rate-engine-api
+  namespace: pms
+  labels:
+    Domain: pms-rate-engine-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: rate-engine-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /grpc.health.v1.Health/Check
+    alb.ingress.kubernetes.io/success-codes: 0-99
+  name: rate-engine-grpc-api
+  namespace: pms
+  labels:
+    Domain: pms-rate-engine-grpc-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: rate-engine-api
+    env: dev
+  ports:
+  - port: 81
+    name: http2
+    targetPort: 81
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rate-engine-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rate-engine-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 180m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 350Mi

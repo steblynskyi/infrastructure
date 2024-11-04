@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-remotelock-api
+  labels:
+    app: extensions-remotelock-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: extensions-remotelock-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-remotelock-api
+      labels:
+        env: dev
+        app: extensions-remotelock-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-remotelock-api
+        image: steblynskyi-docker.jfrog.io/pms-extensions-remotelock-api:8a3145c
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: center_REMOTELOCK_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/remotelock/username"
+        - name: center_REMOTELOCK_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/remotelock/password"
+        - name: ConnectionStrings__RemoteLockDb
+          value: "Application Name=pms-extensions-remotelock-api;Server=sql-center.dev-steblynskyi.com;User Id=$(center_REMOTELOCK_DB_USERNAME);password=$(center_REMOTELOCK_DB_PASSWORD);Database=RemoteLock;MultipleActiveResultSets=True;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: extensions-remotelock-api
+  namespace: pms
+  labels:
+    Domain: pms-extensions-remotelock-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: extensions-remotelock-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: extensions-remotelock-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: extensions-remotelock-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

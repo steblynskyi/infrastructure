@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-engine-ui
+  labels:
+    app: booking-engine-ui
+    env: dev
+  namespace: b2b
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: booking-engine-ui
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: booking-engine-ui
+      labels:
+        env: dev
+        app: booking-engine-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: booking-engine-ui
+        image:  steblynskyi-docker.jfrog.io/b2b-booking-engine-ui:58dd7bf
+        imagePullPolicy: Always
+        args:
+        - -base-path=/reservations
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_CONFIGURATION_API_URL
+          value: https://b2b-booking-engine-configuration-api.dev-steblynskyi.com
+        - name: APP_IDENTITY_API_URL
+          value: https://b2b-identity-api.dev-steblynskyi.com
+        - name: APP_PORTAL_API_URL
+          value: https://b2b-unit-owners-api.dev-steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: booking-engine-ui
+  namespace: b2b
+  labels:
+    Domain: b2b-booking-engine-ui.dev-steblynskyi.com
+spec:
+  selector:
+    app: booking-engine-ui
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: booking-engine-ui
+  namespace: b2b
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: booking-engine-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

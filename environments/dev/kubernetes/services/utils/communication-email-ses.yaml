@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  communication-email-ses
+  labels:
+    app: communication-email-ses
+    env: dev
+  namespace: utils
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: communication-email-ses
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: communication-email-ses
+      labels:
+        env: dev
+        app: communication-email-ses
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: communication-email-ses
+        image: steblynskyi-docker.jfrog.io/utils-communication-email-ses:526f8a7
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 320Mi
+        ports:
+        - containerPort: 1337
+          name: http
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          value: vault:dev/data/aws/utils/communication-email-ses/aws_access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          value: vault:dev/data/aws/utils/communication-email-ses/aws_secret_access_key
+        - name: INN_LOG_FLUENT_HOST
+          value: utils-fluentd-logging.dev-steblynskyi.com
+        - name: INN_LOG_LEVEL
+          value: silly
+        - name: AWS_REGION
+          value: us-east-1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: communication-email-ses
+  namespace: utils
+  labels:
+    Domain: utils-communication-email-ses.dev-steblynskyi.com
+spec:
+  selector:
+    app: communication-email-ses
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 1337
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: communication-email-ses
+  namespace: utils
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: communication-email-ses
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

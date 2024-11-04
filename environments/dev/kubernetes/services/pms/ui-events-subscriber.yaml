@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui-events-subscriber
+  labels:
+    app: ui-events-subscriber
+    env: dev
+  namespace: pms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ui-events-subscriber
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: ui-events-subscriber
+      labels:
+        env: dev
+        app: ui-events-subscriber
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: ui-events-subscriber
+        image: steblynskyi-docker.jfrog.io/pms-ui-events-subscriber:cc0baf2
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Development
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__steblynskyiEventsDb
+          value: "Server=sql-center.dev-steblynskyi.com;User Id=$(center_DB_USERNAME);password=$(center_DB_PASSWORD);Database=steblynskyiEventsDb;MultipleActiveResultSets=True;Application Name=steblynskyi.Pms.UIInstrumentation.Data.Subscriber;"

@@ -1,0 +1,670 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pms-ingress-internal
+  namespace: pms
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/target-node-labels: kops.k8s.io/instancegroup=nodes
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/tags: Environment=DEV,Name=PMS-Ingress-Internal
+    alb.ingress.kubernetes.io/subnets: subnet-1,subnet-2
+    alb.ingress.kubernetes.io/security-groups: sg-1
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-55555
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80,"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=false,access_logs.s3.bucket=steblynskyi-dev-access-logs,access_logs.s3.prefix=pms,deletion_protection.enabled=true,routing.http2.enabled=true,idle_timeout.timeout_seconds=120
+spec:
+  rules:
+  - host: pms-account-query-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: account-query-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-accounting-ledger-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: accounting-ledger-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-admin-ui.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: admin-ui
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-akia-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: akia-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-assets-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: assets-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-client-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: client-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-credit-card-token-correction-tool-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: credit-card-token-correction-tool-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-folio-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: folio-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-folio-internal-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: folio-internal-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-folio-query-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: folio-query-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-guest-navigation-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: guest-navigation-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-guest-web-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: guest-web-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-guest-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: guest-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-housekeeping-room-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: housekeeping-room-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-innsights-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: innsights-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-innsights-email-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: innsights-email-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific  
+  - host: pms-policy-query-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: policy-query-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-property-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: property-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-rate-package-query-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: rate-package-query-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-rates-ui.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: rates-ui
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-new-rates-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: new-rates-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-payment-query-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: payment-query-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reports-ui.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reports-ui
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reports-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reports-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reports-replication-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reports-replication-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-task-category-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: task-category-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-task-command-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: task-command-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-task-property-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: task-property-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-task-query-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: task-query-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-taxes-ui.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: taxes-ui
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reservation-note-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reservation-note-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reservations-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reservations-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reservations-ui.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reservations-ui
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reservations-csp-ui.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reservations-csp-ui
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-ui-events-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: ui-events-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-unit-owners-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: unit-owners-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-rates-migration-tool-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: rates-migration-tool-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-quickbooks-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: quickbooks-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-quickbooks-desktop-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: quickbooks-desktop-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-quickbooks-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: quickbooks-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-rates-v1-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: rates-v1-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-center-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: center-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-center-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: center-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific  
+  - host: pms-rate-engine-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: rate-engine-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-whistle-background-service-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: whistle-background-service-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reports-presentation-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reports-presentation-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-inventory-sync-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: inventory-sync-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reservations-dashboard-ui.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reservations-dashboard-ui
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-multi-languages-support-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: multi-languages-support-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-marketing-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: marketing-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-localization-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: localization-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-center-internal-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: center-internal-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-amenity-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: amenity-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-custom-fields-ui.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: custom-fields-ui
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reservation-query-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reservation-query-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-inventory-availability-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: inventory-availability-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-extensions-email-rules-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: extensions-email-rules-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-extensions-deferred-jobs-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: extensions-deferred-jobs-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-extensions-outbound-gateway-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: extensions-outbound-gateway-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-extensions-remotelock-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: extensions-remotelock-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-extensions-remotelock-internal-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: extensions-remotelock-internal-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-extensions-templates-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: extensions-templates-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-security-monitor-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: security-monitor-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-reports-export-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reports-export-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: pms-accounts-ui.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: accounts-ui
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific

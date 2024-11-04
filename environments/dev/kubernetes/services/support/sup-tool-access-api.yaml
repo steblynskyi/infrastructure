@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  sup-tool-access-api
+  labels:
+    app: sup-tool-access-api
+    env: dev
+  namespace: support
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sup-tool-access-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: sup-tool-access-api
+      labels:
+        env: dev
+        app: sup-tool-access-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: sup-tool-access-api
+        image: steblynskyi-docker.jfrog.io/sup-tool-access-api:064010a
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 3000
+          name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: sup-tool-access-api
+  namespace: support
+  labels:
+    Domain: support-sup-tool-access-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: sup-tool-access-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 3000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: sup-tool-access-api
+  namespace: support
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: sup-tool-access-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

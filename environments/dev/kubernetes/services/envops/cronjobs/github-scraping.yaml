@@ -1,0 +1,27 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: github-scraping
+  labels:
+    app: github-scraping
+    env: dev
+  namespace: envops
+spec:
+  concurrencyPolicy: Forbid
+  schedule: "0 */6 * * *"
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: github-scraping
+            image: curlimages/curl
+            imagePullPolicy: IfNotPresent
+            command:
+            - sh
+            - -c
+            args:
+            - curl https://envops-devops-portal-api.dev-steblynskyi.com/api/v1/security/scrape
+          restartPolicy: OnFailure

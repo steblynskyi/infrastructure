@@ -1,0 +1,114 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: center-api
+  labels:
+    app: center-api
+    env: dev
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: center-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: center-api
+      labels:
+        app: center-api
+        env: dev
+      annotations:
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: center-api
+        image: steblynskyi-docker.jfrog.io/pms-center-api:d55e06d63
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 512Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Development"
+        - name: TZ
+          value: "America/New_York"
+        - name: center_DB_USERNAME
+          value: "vault:dev/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:dev/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__DefaultConnection
+          value: "Application Name=steblynskyi.Pms.center.Api;data source=sql-center.dev-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;pooling=true;connection lifetime=3600;Connect Timeout=3600;Timeout=3600;max pool size=3000;;MultipleActiveResultSets=True;TrustServerCertificate=Yes;"
+        - name: ConnectionStrings__SubmitPaymentConnection
+          value: "Application Name=steblynskyi.Pms.center.Api-Payments;data source=sql-center.dev-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;pooling=true;connection lifetime=3600;Connect Timeout=3600;Timeout=3600;max pool size=3000;TrustServerCertificate=Yes;"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:dev/data/aws/pms/center-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:dev/data/aws/pms/center-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: us-east-1
+        - name: Smtp__Username
+          value: "vault:dev/data/aws/pms/center-smtp/aws_access_key_id"
+        - name: Smtp__Password
+          value: "vault:dev/data/aws/pms/center-smtp/aws_secret_access_key"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: center-api
+  namespace: pms
+  labels:
+    Domain: pms-center-api.dev-steblynskyi.com
+spec:
+  selector:
+    app: center-api
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: center-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: center-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 180m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 480Mi

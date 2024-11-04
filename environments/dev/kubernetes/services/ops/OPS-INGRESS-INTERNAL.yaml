@@ -1,0 +1,300 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ops-ingress-internal
+  namespace: ops
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/target-node-labels: kops.k8s.io/instancegroup=nodes
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/tags: Environment=DEV,Name=OPS-Ingress-Internal
+    alb.ingress.kubernetes.io/subnets: subnet-03916b6451a44e7c0,subnet-085b2e673568d83eb
+    alb.ingress.kubernetes.io/security-groups: sg-1
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-55555
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80,"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=false,access_logs.s3.bucket=steblynskyi-dev-access-logs,access_logs.s3.prefix=pc,deletion_protection.enabled=true,routing.http2.enabled=true,idle_timeout.timeout_seconds=120
+spec:
+  rules:
+  - host: ops-sql-query-generator.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: sql-query-generator
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-delete-clients-center-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: delete-clients-center-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-db-index-manager-tool.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: db-index-manager-tool
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-db-index-manager-tool-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: db-index-manager-tool-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-production-support-tools-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: production-support-tools-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-time-tracker-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: time-tracker-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-production-support-tools-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: production-support-tools-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-production-support-tools-ui.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: production-support-tools-ui
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-devops-support-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: artifactory-manager
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-data-metrics-manager.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: data-metrics-manager
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-database-info-system.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: database-info-system
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-across-systems-user-tracker.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: across-systems-user-tracker
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-artifactory-manager.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: artifactory-manager
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-interview-management-system.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: interview-management-system
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-interview-management-system-v2.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: interview-management-system-v2
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-people-management-system.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: people-management-system
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-pto-manager.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: pto-manager
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-heart-beat-monitor-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: heart-beat-monitor-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-centralized-log-system-web.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: centralized-log-system-web
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-review-management.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: review-management
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-employee-team-leader-manager.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: employee-team-leader-manager
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: ops-candidate-testing-api.dev-steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: candidate-testing-api
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific
+  - host: ops-candidate-testing-web.dev-steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: candidate-testing-web
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific
+  - host: ops-ip-monitoring-service-api.dev-steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: ip-monitoring-service-api
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific
+  - host: ops-team-status-view.dev-steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: team-status-view
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific
+  - host: ops-employee-evaluations-by-teamleader.dev-steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: employee-evaluations-by-teamleader
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific
+  - host: ops-release-ticket-management.dev-steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: release-ticket-management
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific
+  - host: ops-poc-steblynskyi-logging-api.dev-steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: poc-steblynskyi-logging-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific

@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verticalbooking-reservation-poller
+  labels:
+    app: verticalbooking-reservation-poller
+    env: dev
+  namespace: ota
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: verticalbooking-reservation-poller
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: verticalbooking-reservation-poller
+      labels:
+        env: dev
+        app: verticalbooking-reservation-poller
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: verticalbooking-reservation-poller
+        image: steblynskyi-docker.jfrog.io/ota-verticalbooking-reservation-poller:6e3a7c9
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "DEV"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: verticalbooking-reservation-poller
+  namespace: ota
+  labels:
+    Domain: ota-verticalbooking-reservation-poller.dev-steblynskyi.com
+spec:
+  selector:
+    app: verticalbooking-reservation-poller
+    env: dev
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: verticalbooking-reservation-poller
+  namespace: ota
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: verticalbooking-reservation-poller
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi
