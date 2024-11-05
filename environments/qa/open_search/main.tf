@@ -20,7 +20,7 @@ resource "aws_elasticsearch_domain" "opensearch" {
   domain_endpoint_options {
     custom_endpoint_enabled         = true
     custom_endpoint                 = local.app_domain
-    custom_endpoint_certificate_arn = data.aws_acm_certificate.dev_steblynskyi_cert.arn
+    custom_endpoint_certificate_arn = data.aws_acm_certificate.qa_steblynskyi_cert.arn
     tls_security_policy             = "Policy-Min-TLS-1-2-2019-07"
   }
 
@@ -55,7 +55,7 @@ CONFIG
 }
 
 resource "aws_route53_record" "cname_route53_record" {
-  zone_id    = data.aws_route53_zone.dev_steblynskyi_zone.zone_id
+  zone_id    = data.aws_route53_zone.qa_steblynskyi_zone.zone_id
   name       = local.app_domain
   type       = "CNAME"
   ttl        = "300"
