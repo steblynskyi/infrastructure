@@ -23,7 +23,7 @@ Start-Process `
 	-ArgumentList "/S"
 
 # Download steblynskyiServices from S3 Bucket
-aws s3 cp s3://steblynskyi-service-bucket/DEV/steblynskyi.Services/ C:\steblynskyi.Services\ --recursive
+aws s3 cp s3://steblynskyi-service-bucket/QA/steblynskyi.Services/ C:\steblynskyi.Services\ --recursive
 
 # Install steblynskyiServices
 cd C:\Windows\Microsoft.NET\Framework\v4.0.30319

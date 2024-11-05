@@ -1,6 +1,6 @@
 # Craete SQS Queue Task-Initial-Notes-Import
 resource "aws_sqs_queue" "Task-Initial-Notes-Import" {
-  name                      = "Task-Initial-Notes-Import-DEV"
+  name                      = "Task-Initial-Notes-Import-QA"
   delay_seconds             = 0
   max_message_size          = 262144
   message_retention_seconds = 345600
@@ -15,7 +15,7 @@ resource "aws_sqs_queue" "Task-Initial-Notes-Import" {
 
 # Craete SQS InnSights-WebHookQueue
 resource "aws_sqs_queue" "InnSights-WebHookQueue" {
-  name                      = "InnSights-WebHookQueue-DEV"
+  name                      = "InnSights-WebHookQueue-QA"
   delay_seconds             = 0
   max_message_size          = 262144
   message_retention_seconds = 345600
@@ -65,7 +65,7 @@ POLICY
 
 # Craete SQS Queue Task-Reservation-Updated
 resource "aws_sqs_queue" "Task-Reservation-Updated" {
-  name                      = "Task-Reservation-Updated-DEV"
+  name                      = "Task-Reservation-Updated-QA"
   delay_seconds             = 0
   max_message_size          = 262144
   message_retention_seconds = 345600
@@ -116,7 +116,7 @@ POLICY
 
 # Craete SQS Queue WebHooks-RatePlanQueue
 resource "aws_sqs_queue" "WebHooks-RatePlanQueue" {
-  name                      = "WebHooks-RatePlanQueue-DEV"
+  name                      = "WebHooks-RatePlanQueue-QA"
   delay_seconds             = 0
   max_message_size          = 262144
   message_retention_seconds = 345600
@@ -169,7 +169,7 @@ POLICY
 
 # Craete SQS Queue WebHooks-ReservationsQueue
 resource "aws_sqs_queue" "WebHooks-ReservationsQueue" {
-  name                      = "WebHooks-ReservationsQueue-DEV"
+  name                      = "WebHooks-ReservationsQueue-QA"
   delay_seconds             = 0
   max_message_size          = 262144
   message_retention_seconds = 345600
@@ -214,7 +214,7 @@ POLICY
 
 # Craete SQS Queue Folio-Background-Queue
 resource "aws_sqs_queue" "Folio-Background-Queue" {
-  name                      = "Folio-Background-Queue-DEV"
+  name                      = "Folio-Background-Queue-QA"
   delay_seconds             = 0
   max_message_size          = 262144
   message_retention_seconds = 345600
@@ -259,7 +259,7 @@ POLICY
 
 # Craete SQS Queue Reservation-Background-Queue
 resource "aws_sqs_queue" "Reservation-Background-Queue" {
-  name                      = "Reservation-Background-Queue-DEV"
+  name                      = "Reservation-Background-Queue-QA"
   delay_seconds             = 0
   max_message_size          = 262144
   message_retention_seconds = 345600
@@ -302,9 +302,9 @@ POLICY
 }
 
 
-# SQS Queue Task-Command-AllEvents-DEV.fifo
+# SQS Queue Task-Command-AllEvents-QA.fifo
 resource "aws_sqs_queue" "Task-Command-AllEvents-Queue" {
-  name                      = "Task-Command-AllEvents-DEV.fifo"
+  name                      = "Task-Command-AllEvents-QA.fifo"
   fifo_queue                = true
   delay_seconds             = 0
   max_message_size          = 262144
@@ -356,7 +356,7 @@ POLICY
 
 # Craete SQS Queue Integrations-Email-API-Queue
 resource "aws_sqs_queue" "Integrations-Email-API-SesDeliveryNotifications" {
-  name                      = "Integrations-Email-API-SesDeliveryNotifications-DEV"
+  name                      = "Integrations-Email-API-SesDeliveryNotifications-QA"
   delay_seconds             = 0
   max_message_size          = 262144
   message_retention_seconds = 345600

@@ -2,10 +2,6 @@
 # Set EST Time
 Tzutil /s "Eastern Standard Time"
 
-# Set environment variables "as temporary solution"
-[System.Environment]::SetEnvironmentVariable('SmtpUsername','here',[System.EnvironmentVariableTarget]::Machine)
-[System.Environment]::SetEnvironmentVariable('SmtpPassword','here',[System.EnvironmentVariableTarget]::Machine)
-
 # Install CodeDeploy Agent Latest Version
 Set-ExecutionPolicy RemoteSigned -Force
 Import-Module AWSPowerShell
@@ -22,34 +18,6 @@ Start-Process `
 	-FilePath $env:USERPROFILE\Downloads\SSMAgent_latest.exe `
 	-ArgumentList "/S"
 
-# Download steblynskyiServices from S3 Bucket
-aws s3 cp s3://steblynskyi-service-bucket/DEV/steblynskyi.Services/ C:\steblynskyi.Services\ --recursive
-
-# Install steblynskyiServices
-cd C:\Windows\Microsoft.NET\Framework\v4.0.30319
-.\installutil.exe -i "C:\steblynskyi.Services\Pms.Scheduling\steblynskyiSchedulerService.exe"
-.\installutil.exe -i "C:\steblynskyi.Services\PMS.Reporting\ReportingServiceHost.exe"
-.\installutil.exe -i "C:\steblynskyi.Services\steblynskyi.MessageMonitor\steblynskyiMessageMonitor.exe"
-
-# Add additional HDD
-$NewDiskNumber = 1
-$NewDiskLabel="Data"
-
-$diskpart_command = $Null
-$diskpart_command = @"
-SELECT DISK $NewDiskNumber
-ATTRIBUTES DISK CLEAR READONLY
-ONLINE DISK
-create partition primary
-list partition
-select partition 1
-format fs=NTFS quick
-assign letter=D
-"@
-$diskpart_command | diskpart
-
-Start-Sleep -s 150
-
 # Join Instance to Domain Controller
 Set-DefaultAWSRegion -Region us-east-1
 Set-Variable -name instance_id -value (Invoke-Restmethod -uri http://169.254.169.254/latest/meta-data/instance-id)
@@ -57,7 +25,7 @@ $Params = @{"directoryId"="${directoryId}";"directoryName"="${directoryName}";"d
 New-SSMAssociation -InstanceId $instance_id -Name "steblynskyi-ad-join" -Parameter $Params
 
 # Sleep State for CodeDeploy to Deploy Application
-Start-Sleep -s 360
+Start-Sleep -s 480
 
 Restart-Computer -force
 </powershell>
