@@ -26,6 +26,12 @@ spec:
           image: steblynskyi-docker.jfrog.io/ops-db-index-manager-tool:09bc797
           imagePullPolicy: Always
           resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
           ports:
             - containerPort: 80
               name: http

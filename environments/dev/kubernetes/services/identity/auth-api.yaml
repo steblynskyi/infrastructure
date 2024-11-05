@@ -54,13 +54,11 @@ spec:
         - name: AWS_REGION
           value: us-east-1
         - name: PUBLIC_KEY_BUCKET_NAME
-          value: steblynskyi-dev.inn.public-keys
+          value: steblynskyi-dev-inn-public-keys
         - name: DYNAMO_EVENTS_TABLE
           value: application-entitlements-dev
         - name: INN_LOG_LEVEL
           value: silly
-
-          value: here
 ---
 apiVersion: v1
 kind: Service

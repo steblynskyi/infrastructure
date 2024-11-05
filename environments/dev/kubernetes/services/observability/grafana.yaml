@@ -51,7 +51,7 @@ data:
     name = OneLogin
     enabled = true
     allow_sign_up = true
-    client_id = 111-222-333-444-55555
+    client_id = here
     client_secret = here
     scopes = openid email name groups
     auth_url = https://steblynskyi.onelogin.com/oidc/2/auth

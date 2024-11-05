@@ -52,7 +52,6 @@ spec:
           value: "Application Name=pms-extensions-email-rules-api;Server=sql-center.dev-steblynskyi.com;User Id=$(center_EMAILRULES_DB_USERNAME);password=$(center_EMAILRULES_DB_PASSWORD);Database=EmailRules;TrustServerCertificate=true"
         - name: ConnectionStrings__centerDb
           value: "Server=sql-center.dev-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;Application Name=steblynskyi.Extensions.EmailRules.Api;TrustServerCertificate=Yes;"
-        
 ---
 apiVersion: v1
 kind: Service

@@ -49,10 +49,9 @@ spec:
         - name: X_AMZ_SNS_TOPIC_ARN
           value: arn:aws:sns:us-east-1:123:Email-API-DEV
         - name: X_AMZ_SNS_SUBSCRIPTION_ARN
-          value: arn:aws:sns:us-east-1:123:Email-API-DEV:42a4c123-4d69-4003-ab37-5ff6e7b97038
+          value: arn:aws:sns:us-east-1:123:Email-API-DEV:-taras-steblynkyi
         - name: HOST
           value: pms-email-api.dev-steblynskyi.com
-       
 ---
 apiVersion: v1
 kind: Service

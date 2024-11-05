@@ -10,7 +10,7 @@ metadata:
     alb.ingress.kubernetes.io/scheme: internal
     alb.ingress.kubernetes.io/tags: Environment=DEV,Name=B2B-Ingress-Internal
     alb.ingress.kubernetes.io/subnets: subnet-1,subnet-2
-    alb.ingress.kubernetes.io/security-groups: sg-05ade034711ac92e4
+    alb.ingress.kubernetes.io/security-groups: sg-1
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-55555
     alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80,"HTTPS":443}]'
@@ -18,7 +18,7 @@ metadata:
     alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=false,access_logs.s3.bucket=steblynskyi-dev-kube-access-logs,access_logs.s3.prefix=b2b,deletion_protection.enabled=true,routing.http2.enabled=true,idle_timeout.timeout_seconds=120
 spec:
   rules:
-  - host: portal.dev-steblynskyi
+  - host: portal.dev-steblynskyi.com
     http:
       paths:
       - backend:
@@ -42,7 +42,7 @@ spec:
               number: 80
         path: /*
         pathType: ImplementationSpecific
-  - host: b2b-unit-owners-api.dev-steblynskyi
+  - host: b2b-unit-owners-api.dev-steblynskyi.com
     http:
       paths:
       - backend:
@@ -52,7 +52,7 @@ spec:
               number: 80
         path: /*
         pathType: ImplementationSpecific
-  - host: b2b-identity-api.dev-steblynskyi
+  - host: b2b-identity-api.dev-steblynskyi.com
     http:
       paths:
       - backend:
@@ -62,7 +62,7 @@ spec:
               number: 80
         path: /*
         pathType: ImplementationSpecific
-  - host: b2b-booking-engine-configuration-api.dev-steblynskyi
+  - host: b2b-booking-engine-configuration-api.dev-steblynskyi.com
     http:
       paths:
       - backend:
@@ -72,7 +72,7 @@ spec:
               number: 80
         path: /*
         pathType: ImplementationSpecific
-  - host: b2b-booking-engine-api.dev-steblynskyi
+  - host: b2b-booking-engine-api.dev-steblynskyi.com
     http:
       paths:
       - backend:

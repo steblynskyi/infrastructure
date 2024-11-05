@@ -40,8 +40,6 @@ spec:
         env:
         - name: ASPNETCORE_ENVIRONMENT
           value: Development
-
-          value: here=
         - name: center_DB_USERNAME
           value: "vault:dev/data/rds/sql-center/center01p/username"
         - name: center_DB_PASSWORD

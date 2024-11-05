@@ -23,10 +23,10 @@ unset JMX_PORT
 /opt/bitnami/kafka/bin/kafka-configs.sh --bootstrap-server kafka:9092 --alter --entity-type topics --entity-name reservation.public.customfields --add-config min.insync.replicas=2
 
 # Update connector configuration
-# Update Kafka cluster configuration with config min.insync.replica =2 as env variable. 
+# Update Kafka cluster configuration with config min.insync.replica =2 as env variable.
 
 
-# To Update replication factor, Please use kafka contorl center cli - like below  
+# To Update replication factor, Please use kafka contorl center cli - like below
 
 - BROKERS="kafka:9092" kafkactl alter topic debezium_connectors_offsets --replication-factor 3
 
@@ -34,14 +34,14 @@ unset JMX_PORT
 
 - BROKERS="kafka:9092" kafkactl alter topic debezium_connectors --replication-factor 3
 
-Output should look something like below 
+Output should look something like below
 reassignment running for topic=debezium_connectors_offsets partition=0: replicas:[2 1 0] addingReplicas:[1 0] removingReplicas:[]
 reassignment running for topic=debezium_connectors_offsets partition=24: replicas:[2 1 0] addingReplicas:[1 0] removingReplicas:[]
 
 partition replicas have been reassigned
 
 
-# To update existing topic configuration : use below command. 
+# To update existing topic configuration : use below command.
 
 BROKERS="kafka:9092" kafkactl alter topic folio.public.folios --config retention.bytes=-1
 

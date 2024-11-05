@@ -25,7 +25,7 @@ spec:
         - name: steblynskyi
       containers:
         - name: delete-clients-center-web
-          image: steblynskyi-docker.jfrog.io/ops-delete-clients-center-web:39a62d4 
+          image: steblynskyi-docker.jfrog.io/ops-delete-clients-center-web:39a62d4
           imagePullPolicy: Always
           resources:
             requests:

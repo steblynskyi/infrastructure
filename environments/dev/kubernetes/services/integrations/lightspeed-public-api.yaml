@@ -44,11 +44,11 @@ spec:
           value: "vault:dev/data/rds/sql-center/Lightspeed/username"
         - name: center_LIGHTSPEED_DB_PASSWORD
           value: "vault:dev/data/rds/sql-center/Lightspeed/password"
-        - name: "ConnectionStrings__Lightspeed"
+        - name: ConnectionStrings__Lightspeed
           value: "Application Name=steblynskyi.Integrations.Lightspeed.Api;Server=sql-center.dev-steblynskyi.com;User Id=$(center_LIGHTSPEED_DB_USERNAME);password=$(center_LIGHTSPEED_DB_PASSWORD);Database=Lightspeed;MultipleActiveResultSets=True;"
-        - name: "Endpoints__PmsCoreApi"
+        - name: Endpoints__PmsCoreApi
           value: "https://be-core-api.dev-steblynskyi.com"
-        - name: "LightspeedSettings__BaseUrl"
+        - name: LightspeedSettings__BaseUrl
           value: "https://test.lightspeedapis.com/"
 ---
 apiVersion: v1

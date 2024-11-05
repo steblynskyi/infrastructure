@@ -8,9 +8,9 @@ metadata:
     env: dev
 type: Opaque
 data:
-  cookie-secret: "VkgzZnJnYUR1Vm5HamZHMHdyYmg4bkRLUkNaWFNDTVY="
-  client-secret: "ZTAzYzExNTMxYWI4NmY4ZGUzZjU4MDI5NjZlMGRjN2I4MDk4OTM3YmE5NDAzZmE4YTVkOGYwMzI0YzRkYzJhMw=="
-  client-id: "OTg3MjA1ZTAtN2U4My0wMTNiLTAxYTUtMGE0MWQ5NzQzOGU1NjYyNTU="
+  cookie-secret: "here="
+  client-secret: "here=="
+  client-id: "here="
 ---
 apiVersion: v1
 kind: ConfigMap

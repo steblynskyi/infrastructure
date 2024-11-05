@@ -63,8 +63,6 @@ spec:
           value: vault:dev/data/aws/pms/folio-api/aws_secret_access_key
         - name: AWS_REGION
           value: us-east-1
-        - name: PrivateAuthentication__ApiKey
-          value: 2gCsepQI76zUVptD9hcLZZ63
         - name: ConnectionStrings__center
           value: Application Name=steblynskyi.Folio.Api;Server=sql-center.dev-steblynskyi.com;Database=center01p;User Id=$(center_DB_USERNAME); password=$(center_DB_PASSWORD);TrustServerCertificate=Yes;
         - name: ConnectionStrings__Folio

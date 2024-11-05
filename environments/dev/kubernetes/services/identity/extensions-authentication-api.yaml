@@ -39,13 +39,13 @@ spec:
           name: http
         env:
         - name: ASPNETCORE_ENVIRONMENT
-          value: Development
+          value: "Development"
         - name: AWS_REGION
-          value: us-east-1
+          value: "us-east-1"
         - name: AWS_ACCESS_KEY_ID
-          value: vault:dev/data/aws/identity/extensions-authentication-api/aws_access_key_id
+          value: "vault:dev/data/aws/identity/extensions-authentication-api/aws_access_key_id"
         - name: AWS_SECRET_ACCESS_KEY
-          value: vault:dev/data/aws/identity/extensions-authentication-api/aws_secret_access_key
+          value: "vault:dev/data/aws/identity/extensions-authentication-api/aws_secret_access_key"
 ---
 apiVersion: v1
 kind: Service

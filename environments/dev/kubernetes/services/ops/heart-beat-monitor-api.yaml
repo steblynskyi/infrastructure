@@ -25,7 +25,7 @@ spec:
         - name: steblynskyi
       containers:
         - name: heart-beat-monitor-api
-          image: steblynskyi-docker.jfrog.io/ops-heart-beat-monitor-api:bcbf153  
+          image: steblynskyi-docker.jfrog.io/ops-heart-beat-monitor-api:bcbf153
           imagePullPolicy: Always
           resources:
             requests:

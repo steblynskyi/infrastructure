@@ -9,7 +9,7 @@ spec:
     matchLabels:
       app: zookeeper
 ---
-# Zookeeper Config map 
+# Zookeeper Config map
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -96,7 +96,7 @@ metadata:
   name: zookeeper
   namespace: kafka
   labels:
-    app: zookeeper  
+    app: zookeeper
 spec:
   replicas: 2
   podManagementPolicy: Parallel

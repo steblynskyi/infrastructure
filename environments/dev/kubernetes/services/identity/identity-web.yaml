@@ -46,8 +46,6 @@ spec:
           value: https://pms-center-api.dev-steblynskyi.com/
         - name: APP_JWT_AUTH_BASE_URL
           value: https://be-auth-jwt-api.dev-steblynskyi.com/api/v1
-        - name: APP_LOG_ROCKET_ID
-          value: "dddd/dev-center"
 ---
 apiVersion: v1
 kind: Service

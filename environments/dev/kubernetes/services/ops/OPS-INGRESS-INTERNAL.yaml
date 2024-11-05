@@ -9,7 +9,7 @@ metadata:
     alb.ingress.kubernetes.io/target-node-labels: kops.k8s.io/instancegroup=nodes
     alb.ingress.kubernetes.io/scheme: internal
     alb.ingress.kubernetes.io/tags: Environment=DEV,Name=OPS-Ingress-Internal
-    alb.ingress.kubernetes.io/subnets: subnet-03916b6451a44e7c0,subnet-085b2e673568d83eb
+    alb.ingress.kubernetes.io/subnets: subnet-1,subnet-2
     alb.ingress.kubernetes.io/security-groups: sg-1
     alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-55555
     alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01

@@ -39,7 +39,7 @@ spec:
           name: http
         env:
         - name: ASPNETCORE_ENVIRONMENT
-          value: Development
+          value: "Development"
         - name: center_GBL_DB_USERNAME
           value: "vault:dev/data/rds/sql-center/gbl/username"
         - name: center_GBL_DB_PASSWORD

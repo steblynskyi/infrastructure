@@ -35,7 +35,7 @@ spec:
             timeoutSeconds: 5
           env:
             - name: FLUENT_ELASTICSEARCH_HOST
-              value: "vpc-utils-logging-dev-cqg3cgfljgvffe43x7tjnbmixy.us-east-1.es.amazonaws.com"
+              value: "vpc-utils-logging-dev-here.us-east-1.es.amazonaws.com"
             - name: FLUENT_ELASTICSEARCH_PORT
               value: "443"
             - name: AWS_ACCESS_KEY_ID
@@ -66,8 +66,8 @@ metadata:
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-internal: "true"
     service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "Name=Fluent-Bit-Log"
-    service.beta.kubernetes.io/aws-load-balancer-security-groups: sg-09b59f856490bbf5e
-    service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-085b2e673568d83eb,subnet-03916b6451a44e7c0
+    service.beta.kubernetes.io/aws-load-balancer-security-groups: sg-1
+    service.beta.kubernetes.io/aws-load-balancer-subnets: subnet-1,subnet-2
     external-dns.alpha.kubernetes.io/hostname: utils-logging.dev-steblynskyi.com
 spec:
   ports:
