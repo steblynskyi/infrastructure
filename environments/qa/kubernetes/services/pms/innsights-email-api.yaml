@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: innsights-email-api
+  labels:
+    app: innsights-email-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: innsights-email-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: innsights-email-api
+      labels:
+        env: qa
+        app: innsights-email-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: innsights-email-api
+        image: steblynskyi-docker.jfrog.io/pms-innsights-email-api:89af26a2d
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 350m
+            memory: 512Mi
+        ports:
+        - containerPort: 3001
+          name: http
+        env:
+        - name: CHART_SERVER
+          value: "https://utils-highcharts-export.qa-steblynskyi.com"
+        - name: REACT_APP_CURRENT_DOMAIN
+          value: "https://app.qa-steblynskyi.com"
+        - name: NODE_ENV
+          value: QA
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:qa/data/aws/pms/innsights-email-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:qa/data/aws/pms/innsights-email-api/aws_secret_access_key"
+        - name: AWS_BUCKET
+          value: "steblynskyi-qa.pms-innsights-email-api"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: innsights-email-api
+  namespace: pms
+  labels:
+    Domain: pms-innsights-email-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: innsights-email-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 3001
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: innsights-email-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: innsights-email-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 480Mi

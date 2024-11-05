@@ -1,0 +1,27 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: setup-web
+  namespace: ota
+  labels:
+    app: setup-web
+    env: qa
+spec:
+  serviceRef:
+    name: setup-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Setup-Web-QA/40c83fb5372e7c30
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: public-api
+  namespace: ota
+  labels:
+    app: public-api
+    env: qa
+spec:
+  serviceRef:
+    name: public-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/OTA-Public-API-QA/29e10af86128cea5

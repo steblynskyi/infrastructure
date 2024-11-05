@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: data-metrics-manager
+  labels:
+    app: data-metrics-manager
+    env: qa
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: data-metrics-manager
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: data-metrics-manager
+      labels:
+        app: data-metrics-manager
+        env: qa
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: data-metrics-manager
+          image: steblynskyi-docker.jfrog.io/ops-data-metrics-manager:8030142
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: QA
+            - name: "Logging__LogLevel__Default"
+              value: "Information"
+            - name: "Logging__LogLevel__Microsoft"
+              value: "Warning"
+            - name: "Logging__LogLevel__Microsoft.Hosting.Lifetime"
+              value: "Information"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: data-metrics-manager
+  namespace: ops
+  labels:
+    Domain: ops-data-metrics-manager.qa-steblynskyi.com
+spec:
+  selector:
+    app: data-metrics-manager
+    env: qa
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: data-metrics-manager
+  namespace: ops
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: data-metrics-manager
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

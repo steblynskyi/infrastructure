@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  centralized-log-system-web
+  labels:
+    app: centralized-log-system-web
+    env: qa
+  namespace: ops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: centralized-log-system-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: centralized-log-system-web
+      labels:
+        env: qa
+        app: centralized-log-system-web
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: centralized-log-system-web
+        image: steblynskyi-docker.jfrog.io/ops-centralized-log-system-web:5f210e1
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 50Mi
+          limits:
+            cpu: 150m
+            memory: 250Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: INTERNALTOOLS_CENTRALIZEDLOGSYSTEM_DB_USERNAME
+          value: "vault:qa/data/rds/sql-internaltools/centralizedlogsystem/username"
+        - name: INTERNALTOOLS_CENTRALIZEDLOGSYSTEM_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-internaltools/centralizedlogsystem/password"
+        - name: "ConnectionStrings__CentralizedLogSystemDb"
+          value: "Server=internal-tools-db.qa-steblynskyi.com;Database=CentralizedLogSystemDB;user id=$(INTERNALTOOLS_CENTRALIZEDLOGSYSTEM_DB_USERNAME);password=$(INTERNALTOOLS_CENTRALIZEDLOGSYSTEM_DB_PASSWORD);"
+        - name: "Logging__LogLevel__Default"
+          value: "Information"
+        - name: "Logging__LogLevel__Microsoft"
+          value: "Warning"
+        - name: "Logging__LogLevel__Microsoft.Hosting.Lifetime"
+          value: "Information"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: centralized-log-system-web
+  namespace: ops
+  labels:
+    Domain: ops-centralized-log-system-web.qa-steblynskyi.com
+spec:
+  selector:
+    app: centralized-log-system-web
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: centralized-log-system-web
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: centralized-log-system-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 240Mi

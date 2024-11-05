@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui-events-api
+  labels:
+    app: ui-events-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ui-events-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: ui-events-api
+      labels:
+        env: qa
+        app: ui-events-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: ui-events-api
+        image: steblynskyi-docker.jfrog.io/pms-ui-events-api:cc0baf2
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__steblynskyiEventsDb
+          value: "Server=sql-center.qa-steblynskyi.com;User Id=$(center_DB_USERNAME);password=$(center_DB_PASSWORD);Database=steblynskyiEventsDb;MultipleActiveResultSets=True;Application Name=steblynskyi.Pms.UIInstrumentation.Data.Migrator;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: ui-events-api
+  namespace: pms
+  labels:
+    Domain: pms-ui-events-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: ui-events-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ui-events-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ui-events-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

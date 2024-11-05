@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservation-background-job
+  labels:
+    app: reservation-background-job
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reservation-background-job
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: reservation-background-job
+      labels:
+        env: qa
+        app: reservation-background-job
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: reservation-background-job
+        image: steblynskyi-docker.jfrog.io/pms-reservation-background-job:bef9de66
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 384Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:qa/data/aws/pms/reservation-background-job/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:qa/data/aws/pms/reservation-background-job/aws_secret_access_key"
+        - name: AWS_DEFAULT_REGION
+          value: us-east-1
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__center
+          value: Application Name=steblynskyi.Reservations.BackgroundJob;Server=sql-center.qa-steblynskyi.com;Database=center01p;User Id=$(center_DB_USERNAME); password=$(center_DB_PASSWORD); TrustServerCertificate=Yes;
+        - name: ApiSettings__EmailTriggerCreationApi
+          value: https://app.qa-steblynskyi.com/steblynskyiServices/ScheduleEmailTriggerCreator/Create
+        - name: ReservationBackgroundJobSettings__ReservationQueueUrl
+          value: https://sqs.us-east-1.amazonaws.com/123/Reservation-Background-Queue-QA
+        - name: WebHookSettings__WebHookApiUrl
+          value: https://pms-webhooks-api.qa-steblynskyi.com/api

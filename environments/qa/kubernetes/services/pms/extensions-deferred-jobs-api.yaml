@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-deferred-jobs-api
+  labels:
+    app: extensions-deferred-jobs-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: extensions-deferred-jobs-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-deferred-jobs-api
+      labels:
+        env: qa
+        app: extensions-deferred-jobs-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-deferred-jobs-api
+        image: steblynskyi-docker.jfrog.io/pms-extensions-deferred-jobs-api:d002283
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: QUARTZ_DEFERREDJOBS_DB_USERNAME
+          value: "vault:qa/data/rds/sql-quartz/deferredjobs/username"
+        - name: QUARTZ_DEFERREDJOBS_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-quartz/deferredjobs/password"
+        - name: ConnectionStrings__Quartz
+          value: "Application Name=pms-extensions-deferred-jobs-api;Server=sql-quartz.qa-steblynskyi.com;User ID=$(QUARTZ_DEFERREDJOBS_DB_USERNAME);Password=$(QUARTZ_DEFERREDJOBS_DB_PASSWORD);Initial Catalog=Quartz_SCHQA;Connect Timeout=30;Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: extensions-deferred-jobs-api
+  namespace: pms
+  labels:
+    Domain: pms-extensions-deferred-jobs-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: extensions-deferred-jobs-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: extensions-deferred-jobs-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: extensions-deferred-jobs-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 130m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

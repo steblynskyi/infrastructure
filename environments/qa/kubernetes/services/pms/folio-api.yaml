@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: folio-api
+  labels:
+    app: folio-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: folio-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: folio-api
+      labels:
+        env: qa
+        app: folio-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: folio-api
+        image: steblynskyi-docker.jfrog.io/pms-folio-api:5f6fbc202
+        imagePullPolicy: Always
+        resources:
+         requests:
+            cpu: 25m
+            memory: 32Mi
+         limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: RESERVATION_FOLIO_DB_USERNAME
+          value: "vault:qa/data/rds/postgresql-reservation/folio/username"
+        - name: RESERVATION_FOLIO_DB_PASSWORD
+          value: "vault:qa/data/rds/postgresql-reservation/folio/password"
+        - name: RESERVATION_HISTORY_DB_USERNAME
+          value: "vault:qa/data/rds/postgresql-reservation/pms-history/username"
+        - name: RESERVATION_HISTORY_DB_PASSWORD
+          value: "vault:qa/data/rds/postgresql-reservation/pms-history/password"
+        - name: AWS_ACCESS_KEY_ID
+          value: vault:qa/data/aws/pms/folio-api/aws_access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          value: vault:qa/data/aws/pms/folio-api/aws_secret_access_key
+        - name: AWS_REGION
+          value: us-east-1
+        - name: ConnectionStrings__center
+          value: Application Name=steblynskyi.Folio.Api;Server=sql-center.qa-steblynskyi.com;Database=center01p;User Id=$(center_DB_USERNAME); password=$(center_DB_PASSWORD);TrustServerCertificate=Yes;
+        - name: ConnectionStrings__Folio
+          value: Application Name=steblynskyi.Folio.Api;Server=reservation-db.qa-steblynskyi.com;User ID=$(RESERVATION_FOLIO_DB_USERNAME);Password=$(RESERVATION_FOLIO_DB_PASSWORD);Database=folio;
+        - name: ConnectionStrings__Hangfire
+          value: Application Name=steblynskyi.Folio.Api.Hangfire;Server=reservation-db.qa-steblynskyi.com;User ID=$(RESERVATION_FOLIO_DB_USERNAME);Password=$(RESERVATION_FOLIO_DB_PASSWORD);Database=folio;
+        - name: ConnectionStrings__History
+          value: Application Name=steblynskyi.Folio.Api.History;Server=reservation-db.qa-steblynskyi.com;User Id=$(RESERVATION_HISTORY_DB_USERNAME);Password=$(RESERVATION_HISTORY_DB_PASSWORD);Database=pms_history;
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: folio-api
+  namespace: pms
+  labels:
+    Domain: pms-folio-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: folio-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: folio-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: folio-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 350Mi

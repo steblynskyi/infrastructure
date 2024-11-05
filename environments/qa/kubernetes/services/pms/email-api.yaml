@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-api
+  labels:
+    app: email-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: email-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: email-api
+      labels:
+        env: qa
+        app: email-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: email-api
+        image: steblynskyi-docker.jfrog.io/pms-email-api:3aedd49
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: RESERVATION_HISTORY_DB_USERNAME
+          value: "vault:qa/data/rds/postgresql-reservation/pms-history/username"
+        - name: RESERVATION_HISTORY_DB_PASSWORD
+          value: "vault:qa/data/rds/postgresql-reservation/pms-history/password"
+        - name: INN_EMAIL_NOTIFICATIONS_DB
+          value: Host=reservation-db.qa-steblynskyi.com;Database=pms_history;Username=$(RESERVATION_HISTORY_DB_USERNAME);Password=$(RESERVATION_HISTORY_DB_PASSWORD);
+        - name: X_AMZ_SNS_TOPIC_ARN
+          value: arn:aws:sns:us-east-1:123:Email-API-QA
+        - name: X_AMZ_SNS_SUBSCRIPTION_ARN
+          value: arn:aws:sns:us-east-1:123:Email-API-QA:-taras-steblynkyi
+        - name: HOST
+          value: pms-email-api.qa-steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: email-api
+  namespace: pms
+  labels:
+    Domain: pms-email-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: email-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: email-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: email-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

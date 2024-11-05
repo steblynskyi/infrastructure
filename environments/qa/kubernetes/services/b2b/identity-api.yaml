@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-api
+  labels:
+    app: identity-api
+    env: qa
+  namespace: b2b
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: identity-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: identity-api
+      labels:
+        env: qa
+        app: identity-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: identity-api
+        image: steblynskyi-docker.jfrog.io/b2b-identity-api:e8627b5
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /portal-identity/health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /portal-identity/health/status
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: RESERVATION_IDENTITY_DB_USERNAME
+          value: "vault:qa/data/rds/postgresql-reservation/identity-portal/username"
+        - name: RESERVATION_IDENTITY_DB_PASSWORD
+          value: "vault:qa/data/rds/postgresql-reservation/identity-portal/password"
+        - name: "ConnectionStrings__identity-portal"
+          value: "Host=reservation-db.qa-steblynskyi.com;Database=identity_portal;Username=$(RESERVATION_IDENTITY_DB_USERNAME);Password=$(RESERVATION_IDENTITY_DB_PASSWORD);Pooling=true;MaxPoolSize=250;Connection Idle Lifetime=60;CommandTimeout=60;Application Name=B2B.Identity.Api;"
+        - name: Smtp__Username
+          value: "vault:qa/data/aws/pms/center-smtp/aws_access_key_id"
+        - name: Smtp__Password
+          value: "vault:qa/data/aws/pms/center-smtp/aws_secret_access_key"
+        - name: RedisCache__ConnectionString
+          value: redis.qa-steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /portal-identity/health/live
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: identity-api
+  namespace: b2b
+  labels:
+    Domain: b2b-identity-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: identity-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: identity-api
+  namespace: b2b
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: identity-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 230Mi
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

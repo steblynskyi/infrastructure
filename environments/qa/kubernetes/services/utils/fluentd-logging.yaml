@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentd-logging
+  labels:
+    app: fluentd-logging
+    env: qa
+  namespace: utils
+spec:
+  selector:
+    matchLabels:
+      name: fluentd-logging
+  template:
+    metadata:
+      name: fluentd-logging
+      labels:
+        env: qa
+        name: fluentd-logging
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+      - name: steblynskyi
+      containers:
+      - name: fluentd-logging
+        image: steblynskyi-docker.jfrog.io/qaops-logging:v1.0.3
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 24224
+          protocol: TCP
+        securityContext:
+          privileged: true
+        volumeMounts:
+          - name: varlog
+            mountPath: /var/log
+          - name: docker
+            mountPath: /var/lib/docker/containers
+            readOnly: true
+        env:
+          - name: INN_ELASTICSEARCH_ENDPOINT
+            value: here
+          - name: INN_ELASTICSEARCH_REGION
+            value: us-east-1
+          - name: AWS_ACCESS_KEY_ID
+            value: vault:qa/data/aws/utils/logging-elasticsearch/aws_access_key_id
+          - name: AWS_SECRET_ACCESS_KEY
+            value: vault:qa/data/aws/utils/logging-elasticsearch/aws_secret_access_key
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: docker
+        hostPath:
+          path: /var/lib/docker/containers

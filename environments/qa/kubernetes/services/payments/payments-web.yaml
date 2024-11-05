@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-web
+  labels:
+    app: payments-web
+    env: qa
+  namespace: payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: payments-web
+      labels:
+        env: qa
+        app: payments-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: payments-web
+        image: steblynskyi-docker.jfrog.io/payments-web:ae1452f
+        imagePullPolicy: Always
+        args:
+        - -base-path=/
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_LOGIN_REDIRECT
+          value: /login.html
+        - name: APP_center_API_BASE_URL
+          value: https://app.qa-steblynskyi.com
+        - name: APP_JWT_API_URL
+          value: https://be-auth-jwt-api.qa-steblynskyi.com/api
+        - name: APP_OIDC_API_URL
+          value: https://be-auth-openid-api.qa-steblynskyi.com/api
+        - name: APP_OPEN_ID_API_URL
+          value: https://be-auth-openid-api.qa-steblynskyi.com/loginapi/OpenIdLogin
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: payments-web
+  namespace: payments
+  labels:
+    Domain: payments-web.qa-steblynskyi.com
+spec:
+  selector:
+    app: payments-web
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payments-web
+  namespace: payments
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payments-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

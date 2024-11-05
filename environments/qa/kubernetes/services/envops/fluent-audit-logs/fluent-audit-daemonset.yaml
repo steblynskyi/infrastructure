@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluent-bit-audit-logs
+  namespace: envops
+  labels:
+    app: fluent-bit-audit-logs
+    env: qa
+spec:
+  template:
+    metadata:
+      name: fluent-bit-audit-logs
+      labels:
+        app: fluent-bit-audit-logs
+    spec:
+      priorityClassName: system-cluster-critical
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master
+      nodeSelector:
+        kubernetes.io/role: master
+      containers:
+        - name: fluent-bit-audit-logs
+          image: fluent/fluent-bit:1.9.1
+          imagePullPolicy: Always
+          ports:
+            # HTTP Server can be used to query internal information of fluent and monitor metrics of each running plugin.
+            # Also, using it for liveness probes. In future, can be integrated with monitoring tool as well.
+            # Fluent Bit's exposed prometheus style metrics can be leveraged to create dashboards and alerts.
+            # NOTE: this HTTP server is different from tcp plugin server that we use for App fluentbit
+            # https://docs.fluentbit.io/manual/administration/monitoring#http-server
+            - containerPort: 2020
+              name: status-service
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              port: status-service
+              path: /api/v1/uptime
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          env:
+            - name: KUBE_ELASTICSEARCH_HOST
+              value: "observer-es.mgmt-steblynskyi.com"
+            - name: KUBE_ELASTICSEARCH_PORT
+              value: "443"
+            - name: AWS_ACCESS_KEY_ID
+              value: "here"
+            - name: AWS_SECRET_ACCESS_KEY
+              value: "here"
+          volumeMounts:
+            - name: fluent-bit-config
+              mountPath: /fluent-bit/etc/
+            - name: varlog
+              mountPath: /var/log
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "400Mi"
+      volumes:
+        - name: varlog
+          hostPath:
+            path: /var/log
+        - name: fluent-bit-config
+          configMap:
+            name: fluent-bit-audit-logs-config
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: fluent-bit-audit-logs
+---
+# Keeping this service, in order to access the pod's internal running HTTP server for querying purpose
+kind: Service
+apiVersion: v1
+metadata:
+  name: fluent-bit-audit-logs
+  namespace: envops
+  labels:
+    app: fluent-bit-audit-logs
+spec:
+  ports:
+    - port: 2020
+      name: status-service
+      targetPort: 2020
+      protocol: TCP
+  selector:
+    app: fluent-bit-audit-logs
+  type: ClusterIP

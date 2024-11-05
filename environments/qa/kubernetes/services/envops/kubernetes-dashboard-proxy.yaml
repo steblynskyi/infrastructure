@@ -1,0 +1,165 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubernetes-dashboard-proxy
+  namespace: envops
+  labels:
+    app: kubernetes-dashboard-proxy
+    env: qa
+type: Opaque
+data:
+  cookie-secret: "here="
+  client-secret: "here=="
+  client-id: "here="
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubernetes-dashboard-proxy
+  namespace: envops
+  labels:
+    app: kubernetes-dashboard-proxy
+    env: qa
+data:
+  oauth2_proxy.cfg: "email_domains = [ \"*\" ]\nupstreams = [ \"file:///dev/null\" ]"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubernetes-dashboard-proxy
+  namespace: envops
+  labels:
+    app: kubernetes-dashboard-proxy
+    env: qa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubernetes-dashboard-proxy
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: kubernetes-dashboard-proxy
+      labels:
+        app: kubernetes-dashboard-proxy
+        env: qa
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: kubernetes-dashboard-proxy
+        image: "quay.io/oauth2-proxy/oauth2-proxy:v7.4.0"
+        imagePullPolicy: IfNotPresent
+        args:
+          - "--http-address=0.0.0.0:4180"
+          - "--config=/etc/oauth2_proxy/oauth2_proxy.cfg"
+          - "--skip-provider-button=true"
+          - "--scope=groups openid email"
+          - "--provider=oidc"
+          - "--cookie-expire=0h30m0s"
+          - "--code-challenge-method=S256"
+          - "--pass-access-token=true"
+          - "--oidc-issuer-url=https://steblynskyi.onelogin.com/oidc/2"
+          - "--redirect-url=https://envops-kubernetes-dashboard-proxy.qa-steblynskyi.com/oauth2/callback"
+          - "--ssl-upstream-insecure-skip-verify=true"
+          - "--upstream=https://kubernetes-dashboard.kubernetes-dashboard.svc.cluster.local"
+        env:
+        - name: OAUTH2_PROXY_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name:  kubernetes-dashboard-proxy
+              key: client-id
+        - name: OAUTH2_PROXY_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name:  kubernetes-dashboard-proxy
+              key: client-secret
+        - name: OAUTH2_PROXY_COOKIE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name:  kubernetes-dashboard-proxy
+              key: cookie-secret
+        ports:
+          - containerPort: 4180
+            name: http
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          timeoutSeconds: 1
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          timeoutSeconds: 5
+          successThreshold: 1
+          periodSeconds: 10
+        resources:
+          requests:
+              cpu: 25m
+              memory: 64Mi
+          limits:
+              cpu: 250m
+              memory: 512Mi
+        volumeMounts:
+        - mountPath: /etc/oauth2_proxy/oauth2_proxy.cfg
+          name: configmain
+          subPath: oauth2_proxy.cfg
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: kubernetes-dashboard-proxy
+        name: configmain
+      tolerations:
+        []
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /ping
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: kubernetes-dashboard-proxy
+  namespace: envops
+  labels:
+    Domain: envops-kubernetes-dashboard-proxy.qa-steblynskyi.com
+spec:
+  selector:
+    app: kubernetes-dashboard-proxy
+    env: qa
+  ports:
+    - port: 80
+      name: http
+      targetPort: 4180
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: kubernetes-dashboard-proxy
+  namespace: envops
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: kubernetes-dashboard-proxy
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 480Mi

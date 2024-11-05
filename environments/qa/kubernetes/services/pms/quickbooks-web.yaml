@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quickbooks-web
+  labels:
+    app: quickbooks-web
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: quickbooks-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: quickbooks-web
+      labels:
+        env: qa
+        app: quickbooks-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: quickbooks-web
+        image: steblynskyi-docker.jfrog.io/pms-quickbooks-web:1ee0a82
+        imagePullPolicy: Always
+        args:
+        - -base-path=/nightaudit/quickbooks
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_QUICKBOOKS_API_URL
+          value: "https://be-auth-jwt-api.qa-steblynskyi.com/api/v1/quickbooks"
+        - name: APP_AUTH_API_URL
+          value: "https://be-auth-jwt-api.qa-steblynskyi.com/api/v1"
+        - name: APP_center_API_BASE_URL
+          value: "https://app.qa-steblynskyi.com"
+        - name: APP_PMS_center_API
+          value: "https://pms-center-api.qa-steblynskyi.com/api/v1"
+        - name: APP_QB_ONLINE_ENABLED
+          value: "true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: quickbooks-web
+  namespace: pms
+  labels:
+    Domain: pms-quickbooks-web.qa-steblynskyi.com
+spec:
+  selector:
+    app: quickbooks-web
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: quickbooks-web
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: quickbooks-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

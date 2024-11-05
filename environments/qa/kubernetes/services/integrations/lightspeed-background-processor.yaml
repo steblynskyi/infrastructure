@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lightspeed-background-processor
+  labels:
+    app: lightspeed-background-processor
+    env: qa
+  namespace: integrations
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lightspeed-background-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: lightspeed-background-processor
+      labels:
+        env: qa
+        app: lightspeed-background-processor
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: lightspeed-background-processor
+        image: steblynskyi-docker.jfrog.io/integrations-lightspeed-background-processor:d6ad0e6
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: center_LIGHTSPEED_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/Lightspeed/username"
+        - name: center_LIGHTSPEED_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/Lightspeed/password"
+        - name: ConnectionStrings__Lightspeed
+          value: "Application Name=steblynskyi.Integrations.Lightspeed.BackgroundProcessor;Server=sql-center.qa-steblynskyi.com;User Id=$(center_LIGHTSPEED_DB_USERNAME);password=$(center_LIGHTSPEED_DB_PASSWORD);Database=Lightspeed;MultipleActiveResultSets=True;"
+        - name: Endpoints__PmsCoreApi
+          value: "https://be-core-api.qa-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: lightspeed-background-processor
+  namespace: integrations
+  labels:
+    Domain: integrations-lightspeed-background-processor.qa-steblynskyi.com
+spec:
+  selector:
+    app: lightspeed-background-processor
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort

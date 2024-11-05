@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookingdotcom-queue-processor
+  labels:
+    app: bookingdotcom-queue-processor
+    env: qa
+  namespace: ota
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookingdotcom-queue-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: bookingdotcom-queue-processor
+      labels:
+        env: qa
+        app: bookingdotcom-queue-processor
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+        steblynskyi.io/scrape: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: bookingdotcom-queue-processor
+        image: steblynskyi-docker.jfrog.io/ota-bookingdotcom-queue-processor:273ac01bd
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 250Mi
+        ports:
+          - containerPort: 9464
+            name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: center_INNSYNC_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/innSyncDb/username"
+        - name: center_INNSYNC_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/innSyncDb/password"
+        - name: "ConnectionStrings__innSyncDb"
+          value: "Server=sql-center.qa-steblynskyi.com;User Id=$(center_INNSYNC_DB_USERNAME);password=$(center_INNSYNC_DB_PASSWORD);Database=innSyncDb;MultipleActiveResultSets=True;Application Name=Ota.BookingDotCom.QueueProcessor;Encrypt=Optional;"
+        - name: "EndPoints__PmsApi"
+          value: "https://be-core-api.qa-steblynskyi.com"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: bookingdotcom-queue-processor
+  labels:
+    app: bookingdotcom-queue-processor
+    env: qa
+  namespace: ota
+spec:
+  maxReplicas: 4
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: bookingdotcom-queue-processor
+  metrics:
+    - type: Pods
+      pods:
+        metric:
+          name: bdcom_avarage_request_process_time
+        target:
+          type: AverageValue
+          averageValue: 60

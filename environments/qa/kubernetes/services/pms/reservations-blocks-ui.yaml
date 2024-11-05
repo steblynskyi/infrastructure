@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservations-blocks-ui
+  labels:
+    app: reservations-blocks-ui
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: reservations-blocks-ui
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: reservations-blocks-ui
+      labels:
+        env: qa
+        app: reservations-blocks-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: reservations-blocks-ui
+        image: steblynskyi-docker.jfrog.io/pms-reservations-blocks-ui:ef4ef5b
+        imagePullPolicy: IfNotPresent
+        args:
+        - -base-path=/reservations/blocks
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_PMS_center_API_URL
+          value: "https://pms-center-api.qa-steblynskyi.com/api/v1"
+        - name: APP_center_API_BASE_URL
+          value: "https://app.qa-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: reservations-blocks-ui
+  namespace: pms
+  labels:
+    Domain: pms-reservations-blocks-ui.qa-steblynskyi.com
+spec:
+  selector:
+    app: reservations-blocks-ui
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reservations-blocks-ui
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reservations-blocks-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 130m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

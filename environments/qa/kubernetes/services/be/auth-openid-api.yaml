@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-openid-api
+  labels:
+    app: auth-openid-api
+    env: qa
+  namespace: be
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-openid-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: auth-openid-api
+      labels:
+        env: qa
+        app: auth-openid-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: auth-openid-api
+        image: steblynskyi-docker.jfrog.io/steblynskyi.be.api.auth:cbe7c30
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /openid/health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: AUTH
+          value: "OpenIdConnect"
+        - name: AppSettings__ClientId
+          value: "here"
+        - name: AppSettings__ClientSecret
+          value: "here"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: auth-openid-api
+  namespace: be
+  labels:
+    Domain: be-auth-openid-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: auth-openid-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: auth-openid-api
+  namespace: be
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: auth-openid-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

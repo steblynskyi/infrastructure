@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-email-rules-api
+  labels:
+    app: extensions-email-rules-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: extensions-email-rules-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-email-rules-api
+      labels:
+        env: qa
+        app: extensions-email-rules-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-email-rules-api
+        image: steblynskyi-docker.jfrog.io/pms-extensions-email-rules-api:fea7056
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: center_EMAILRULES_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/emailrules/username"
+        - name: center_EMAILRULES_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/emailrules/password"
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__EmailRulesDb
+          value: "Application Name=pms-extensions-email-rules-api;Server=sql-center.qa-steblynskyi.com;User Id=$(center_EMAILRULES_DB_USERNAME);password=$(center_EMAILRULES_DB_PASSWORD);Database=EmailRules;TrustServerCertificate=true"
+        - name: ConnectionStrings__centerDb
+          value: "Server=sql-center.qa-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;Application Name=steblynskyi.Extensions.EmailRules.Api;TrustServerCertificate=Yes;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: extensions-email-rules-api
+  namespace: pms
+  labels:
+    Domain: pms-extensions-email-rules-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: extensions-email-rules-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: extensions-email-rules-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: extensions-email-rules-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

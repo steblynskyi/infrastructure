@@ -1,0 +1,31 @@
+# Source: https://github.com/kubernetes-sigs/prometheus-adapter/blob/master/docs/config-walkthrough.md
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-adapter
+  namespace: observability
+data:
+  config.yaml: |
+    rules:
+    - seriesQuery: 'bdcom_qproc_event_pending_duration_seconds_s_count'
+      seriesFilters: []
+      resources:
+        overrides:
+          namespace:
+            resource: namespace
+          pod:
+            resource: pod
+      name:
+        as: "bdcom_average_request_process_time"
+      metricsQuery: 'rate(bdcom_qproc_event_pending_duration_seconds_s_sum[5m])/rate(bdcom_qproc_event_pending_duration_seconds_s_count[5m])'
+    - seriesQuery: 'xpdia_qproc_event_pending_duration_seconds_s_count'
+      seriesFilters: []
+      resources:
+        overrides:
+          namespace:
+            resource: namespace
+          pod:
+            resource: pod
+      name:
+        as: "xpdia_average_request_process_time"
+      metricsQuery: 'rate(xpdia_qproc_event_pending_duration_seconds_s_sum[5m])/rate(xpdia_qproc_event_pending_duration_seconds_s_count[5m])'

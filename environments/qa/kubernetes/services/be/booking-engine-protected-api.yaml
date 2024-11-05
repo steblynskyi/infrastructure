@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-engine-protected-api
+  labels:
+    app: booking-engine-protected-api
+    env: qa
+  namespace: be
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: booking-engine-protected-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: booking-engine-protected-api
+      labels:
+        env: qa
+        app: booking-engine-protected-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: booking-engine-protected-api
+        image: steblynskyi-docker.jfrog.io/be-booking-engine-protected-api:d88df030
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 9001
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: Authorization__Audience
+          value: "bookingEngine.protected.api"
+        - name: Authorization__Authority
+          value: "https://identity-api.qa-steblynskyi.com"
+        - name: ConnectionStrings__Redis
+          value: "redis.qa-steblynskyi.com"
+        - name: CorsOptions__VerifiedDomains__0
+          value: "client.qa-steblynskyi.com"
+        - name: CorsOptions__VerifiedDomains__1
+          value: "local.qa-steblynskyi.com"
+        - name: EndPoints__AccountingLedgerApi
+          value: "https://pms-accounting-ledger-api.qa-steblynskyi.com"
+        - name: EndPoints__AmenityApi
+          value: "https://pms-amenity-api.qa-steblynskyi.com"
+        - name: EndPoints__AssetsApi
+          value: "https://pms-assets-api.qa-steblynskyi.com"
+        - name: EndPoints__AvailabilityApi
+          value: "https://pms-inventory-availability-api.qa-steblynskyi.com"
+        - name: EndPoints__FolioApi
+          value: "https://pms-folio-api.qa-steblynskyi.com"
+        - name: EndPoints__FolioQueryApi
+          value: "https://pms-folio-query-api.qa-steblynskyi.com"
+        - name: EndPoints__LocalizationApi
+          value: "https://pms-localization-api.qa-steblynskyi.com"
+        - name: EndPoints__MarketingApi
+          value: "https://pms-marketing-api.qa-steblynskyi.com"
+        - name: EndPoints__PackageQueryApi
+          value: "https://pms-rate-package-query-api.qa-steblynskyi.com"
+        - name: EndPoints__PaymentQueryApi
+          value: "https://pms-payment-query-api.qa-steblynskyi.com"
+        - name: EndPoints__PaymentsApi
+          value: "https://payments-api.qa-steblynskyi.com"
+        - name: EndPoints__PmsCoreApi
+          value: "https://be-core-api.qa-steblynskyi.com"
+        - name: EndPoints__PmscenterApi
+          value: "https://pms-center-api.qa-steblynskyi.com"
+        - name: EndPoints__PmsPolicyApi
+          value: "https://pms-policy-query-api.qa-steblynskyi.com"
+        - name: EndPoints__PmsPrivateApi
+          value: "https://app.qa-steblynskyi.com/steblynskyi.Rest.Api"
+        - name: EndPoints__PropertyApi
+          value: "https://pms-property-api.qa-steblynskyi.com"
+        - name: EndPoints__RateApi
+          value: "https://pms-rates-v1-api.qa-steblynskyi.com"
+        - name: EndPoints__ReservationApi
+          value: "https://pms-reservation-query-api.qa-steblynskyi.com"
+        - name: EndPoints__ReservationsPrivateApi
+          value: "https://pms-reservations-api.qa-steblynskyi.com"
+        - name: EndPoints__ReservationsV2Api
+          value: "https://pms-reservations-beta-api.qa-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: booking-engine-protected-api
+  namespace: be
+  labels:
+    Domain: be-booking-engine-protected-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: booking-engine-protected-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 9001
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: booking-engine-protected-api
+  namespace: be
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: booking-engine-protected-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

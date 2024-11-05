@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: public-api
+  labels:
+    app: public-api
+    env: qa
+  namespace: ota
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: public-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: public-api
+      labels:
+        env: qa
+        app: public-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: public-api
+        image: steblynskyi-docker.jfrog.io/ota-api-public:9e4591e
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:qa/data/aws/ota/public-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:qa/data/aws/ota/public-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: EndPoints__OtaApi
+          value: "https://ota-core-api.qa-steblynskyi.com"
+        - name: EndPoints__PmsApi
+          value: "https://be-core-api.qa-steblynskyi.com"
+        - name: HomeAway__BaseUrl
+          value: "https://ota-public-api.qa-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: public-api
+  namespace: ota
+  labels:
+    Domain: ota-public-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: public-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: public-api
+  namespace: ota
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: public-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

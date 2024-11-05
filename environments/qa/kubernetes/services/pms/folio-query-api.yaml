@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: folio-query-api
+  labels:
+    app: folio-query-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: folio-query-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: folio-query-api
+      labels:
+        env: qa
+        app: folio-query-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: folio-query-api
+        image: steblynskyi-docker.jfrog.io/pms-folio-query-api:e571cd1
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 50Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: center_RESERVATION_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/reservation/username"
+        - name: center_RESERVATION_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/reservation/password"
+        - name: ConnectionStrings__centerDb
+          value: "Application Name=pms-folio-query-api;data source=sql-center.qa-steblynskyi.com;User ID=$(center_RESERVATION_DB_USERNAME);Password=$(center_RESERVATION_DB_PASSWORD);Initial Catalog=center01p;pooling=true;connection lifetime=120;max pool size=3000;TrustServerCertificate=Yes;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: folio-query-api
+  namespace: pms
+  labels:
+    Domain: pms-folio-query-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: folio-query-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: folio-query-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: folio-query-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

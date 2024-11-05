@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assets-api
+  labels:
+    app: assets-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: assets-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: assets-api
+      labels:
+        env: qa
+        app: assets-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: assets-api
+        image: steblynskyi-docker.jfrog.io/pms-assets-api:53353d1
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 356Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:qa/data/aws/pms/asset-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:qa/data/aws/pms/asset-api/aws_secret_access_key"
+        - name: INN_S3_REGION
+          value: us-east-1
+        - name: INN_S3_BUCKET_NAME
+          value: steblynskyi-qa-center-nextgen-assets
+        - name: INN_S3_PERM_BUCKET_NAME
+          value: steblynskyi-qa.pms.asset.permanent
+        - name: INN_S3_TEMP_BUCKET_NAME
+          value: steblynskyi-qa.pms.asset.temp
+        - name: INN_S3_PERM_BUCKET_URL
+          value: https://s3.amazonaws.com/steblynskyi-qa.pms.asset.permanent/
+        - name: INN_S3_TEMP_BUCKET_URL
+          value: https://s3.amazonaws.com/steblynskyi-qa.pms.asset.temp/
+        - name: INN_S3_URL_EXPIRE_IN_MINUTES
+          value: "60"
+        - name: INN_LOG_FLUENT_HOST
+          value: utils-fluentd-logging.qa-steblynskyi.com
+        - name: INN_LOG_LEVEL
+          value: ALL
+        - name: NODE_ENV
+          value: qa
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: assets-api
+  namespace: pms
+  labels:
+    Domain: pms-assets-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: assets-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: assets-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: assets-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: correction-tool-web
+  labels:
+    app: correction-tool-web
+    env: qa
+  namespace: payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: correction-tool-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: correction-tool-web
+      labels:
+        env: qa
+        app: correction-tool-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: correction-tool-web
+        image: steblynskyi-docker.jfrog.io/payments-correction-tool-web:1c76525
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_OPEN_ID_API_URL
+          value: "https://be-auth-openid-api.qa-steblynskyi.com/loginapi/OpenIdLogin"
+        - name: APP_OIDC_API_URL
+          value: "https://be-auth-openid-api.qa-steblynskyi.com/api"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: correction-tool-web
+  namespace: payments
+  labels:
+    Domain: payments-correction-tool-web.qa-steblynskyi.com
+spec:
+  selector:
+    app: correction-tool-web
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: correction-tool-web
+  namespace: payments
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: correction-tool-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

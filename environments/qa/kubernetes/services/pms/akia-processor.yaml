@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: akia-processor
+  labels:
+    app: akia-processor
+    env: qa
+  namespace: pms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: akia-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: akia-processor
+      labels:
+        env: qa
+        app: akia-processor
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: akia-processor
+        image: steblynskyi-docker.jfrog.io/pms-akia-processor:52384f2
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: center_AKIA_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/Akia/username"
+        - name: center_AKIA_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/Akia/password"
+        - name: ConnectionStrings__Akia
+          value: Application Name=steblynskyi.Pms.Akia.Processor;Server=sql-center.qa-steblynskyi.com;User Id=$(center_AKIA_DB_USERNAME);password=$(center_AKIA_DB_PASSWORD);Database=Akia;MultipleActiveResultSets=True;TrustServerCertificate=Yes;
+        - name: Endpoints__PmsApi
+          value: https://be-core-api.qa-steblynskyi.com
+        - name: AkiaSettings__RedirectUri
+          value: https://app.qa-steblynskyi.com/setup/akia/connect
+        - name: AkiaSettings__BaseUrl
+          value: https://api.akia.com

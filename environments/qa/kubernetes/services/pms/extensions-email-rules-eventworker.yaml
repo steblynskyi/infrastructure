@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-email-rules-eventworker
+  labels:
+    app: extensions-email-rules-eventworker
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: extensions-email-rules-eventworker
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-email-rules-eventworker
+      labels:
+        env: qa
+        app: extensions-email-rules-eventworker
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-email-rules-eventworker
+        image: steblynskyi-docker.jfrog.io/pms-extensions-email-rules-eventworker:0697f98
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: center_EMAILRULES_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/emailrules/username"
+        - name: center_EMAILRULES_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/emailrules/password"
+        - name: ConnectionStrings__EmailRulesDb
+          value: "Application Name=pms-extensions-email-rules-eventworker;Server=sql-center.qa-steblynskyi.com;User Id=$(center_EMAILRULES_DB_USERNAME);password=$(center_EMAILRULES_DB_PASSWORD);Database=EmailRules;TrustServerCertificate=true"

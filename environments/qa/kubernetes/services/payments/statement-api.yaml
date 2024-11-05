@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-statement-api
+  labels:
+    app: payments-statement-api
+    env: qa
+  namespace: payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments-statement-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: payments-statement-api
+      labels:
+        env: qa
+        app: payments-statement-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: payments-statement-api
+        image: steblynskyi-docker.jfrog.io/payments-statement-api:2abd1703
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 512Mi
+        ports:
+        - containerPort: 6001
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: "ConnectionStrings__steblynskyiPaymentsDb"
+          value: "Application Name=steblynskyi.Payments.Api;Server=sql-center.qa-steblynskyi.com;User Id=$(center_DB_USERNAME);password=$(center_DB_PASSWORD);Database=steblynskyiPayments;MultipleActiveResultSets=True;Encrypt=Optional;"
+        - name: "S3Buckets__StatementDocuments__AccessKey"
+          value: vault:qa/data/aws/payments/statement-api/aws_access_key_id
+        - name: "S3Buckets__StatementDocuments__Name"
+          value: "steblynskyi-qa-payments-statement-documents"
+        - name: "S3Buckets__StatementDocuments__RegionEndpoint"
+          value: "us-east-1"
+        - name: "S3Buckets__StatementDocuments__SecretKey"
+          value: vault:qa/data/aws/payments/statement-api/aws_secret_access_key
+        - name: "S3Buckets__StatementDocuments__Url"
+          value: "https://steblynskyi-qa-payments-statement-documents.s3.amazonaws.com/"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: payments-statement-api
+  namespace: payments
+  labels:
+    Domain: payments-statement-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: payments-statement-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 6001
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payments-statement-api
+  namespace: payments
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payments-statement-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 500Mi

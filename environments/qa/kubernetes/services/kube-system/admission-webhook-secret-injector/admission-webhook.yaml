@@ -1,0 +1,118 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: admission-webhook
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: admission-webhook-secret-injector
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admission-webhook-secret-injector
+  labels:
+    app: admission-webhook-secret-injector
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admission-webhook-secret-injector
+  template:
+    metadata:
+      labels:
+        app: admission-webhook-secret-injector
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1234
+      serviceAccountName: vault-auth
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: admission-webhook-secret-injector
+          image: steblynskyi-docker.jfrog.io/admission-webhook-secret-injector:v0.2.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8443
+              name: webhook-port
+          env:
+            - name: HOST
+              value: 0.0.0.0:8443
+            - name: TLS_CERT_FILE
+              value: /etc/certs/tls.crt
+            - name: TLS_KEY_FILE
+              value: /etc/certs/tls.key
+            - name: VAULT_ADDR
+              value: https://vault.mgmt-steblynskyi.com
+            - name: ENVIRONMENT
+              value: PRODUCTION
+            - name: VAULT_KUBERNETES_MOUNT_PATH
+              value: k8s-qa
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: webhook-port
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 2
+            successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: webhook-port
+              scheme: HTTPS
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 2
+            successThreshold: 1
+          volumeMounts:
+            - name: webhook-tls-certs
+              mountPath: /etc/certs
+              readOnly: true
+      volumes:
+        - name: webhook-tls-certs
+          secret:
+            secretName: admission-webhook-secret-injector-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admission-webhook-secret-injector
+  namespace: kube-system
+spec:
+  selector:
+    app: admission-webhook-secret-injector
+  ports:
+    - port: 443
+      targetPort: webhook-port
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: admission-webhook-secret-injector
+webhooks:
+  - name: admission-webhook-secret-injector.kube-system.svc
+    namespaceSelector:
+      matchLabels:
+        vault-injector: "true"
+    clientConfig:
+      service:
+        name: admission-webhook-secret-injector
+        namespace: kube-system
+        path: "/mutate"
+      caBundle: |
+        here=
+    rules:
+      - operations: [ "CREATE", "UPDATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 5

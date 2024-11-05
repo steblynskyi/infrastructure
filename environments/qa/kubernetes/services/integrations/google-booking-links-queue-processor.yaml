@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: google-booking-links-queue-processor
+  labels:
+    app: google-booking-links-queue-processor
+    env: qa
+  namespace: integrations
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: google-booking-links-queue-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: google-booking-links-queue-processor
+      labels:
+        env: qa
+        app: google-booking-links-queue-processor
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: google-booking-links-queue-processor
+        image: steblynskyi-docker.jfrog.io/integrations-google-booking-links-queue-processor:df860741
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: center_GBL_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/gbl/username"
+        - name: center_GBL_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/gbl/password"
+        - name: ConnectionStrings__GblDb
+          value: "Application Name=steblynskyi.Integrations.GoogleBookingLinks.QueueProcessor;Server=sql-center.qa-steblynskyi.com;User Id=$(center_GBL_DB_USERNAME);password=$(center_GBL_DB_PASSWORD);Database=GBL;MultipleActiveResultSets=True;TrustServerCertificate=Yes;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: google-booking-links-queue-processor
+  namespace: integrations
+  labels:
+    Domain: integrations-googlebookinglinks-queue-processor.qa-steblynskyi.com
+spec:
+  selector:
+    app: google-booking-links-queue-processor
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort

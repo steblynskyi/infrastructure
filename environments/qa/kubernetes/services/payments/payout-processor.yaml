@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payout-processor
+  labels:
+    app: payout-processor
+    env: qa
+  namespace: payments
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: payout-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: payout-processor
+      labels:
+        env: qa
+        app: payout-processor
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: payout-processor
+        image: steblynskyi-docker.jfrog.io/payments-payout-processor:8fb3871
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        ports:
+        - containerPort: 6000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__steblynskyiPaymentsDb
+          value: "Application Name=payments-payout-processor;Server=sql-center.qa-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Database=steblynskyiPayments;MultipleActiveResultSets=True;Encrypt=Optional;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: payout-processor
+  namespace: payments
+  labels:
+    Domain: payments-payout-processor.qa-steblynskyi.com
+spec:
+  selector:
+    app: payout-processor
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 6000
+    protocol: TCP
+  type: NodePort

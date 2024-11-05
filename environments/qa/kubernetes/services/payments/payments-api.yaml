@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-api
+  labels:
+    app: payments-api
+    env: qa
+  namespace: payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: payments-api
+      labels:
+        env: qa
+        app: payments-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: payments-api
+        image: steblynskyi-docker.jfrog.io/payments-api:8fb3871
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 352Mi
+        ports:
+        - containerPort: 6000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__steblynskyiPaymentsDb
+          value: Server=sql-center.qa-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=steblynskyiPayments;pooling=true;MultipleActiveResultSets=True;Application Name=steblynskyi.Api;Encrypt=Optional;Max Pool Size=250
+        - name: S3Buckets__StripeVerificationDocuments__AccessKeyId
+          value: vault:qa/data/aws/payments/payments-api/aws_access_key_id
+        - name: S3Buckets__StripeVerificationDocuments__Name
+          value: steblynskyi-qa-payments-verification-documents
+        - name: S3Buckets__StripeVerificationDocuments__SecretAccessKey
+          value: vault:qa/data/aws/payments/payments-api/aws_secret_access_key
+        - name: S3Buckets__ChargebackEvidenceDocuments__AccessKeyId
+          value: vault:qa/data/aws/payments/payments-api/aws_access_key_id
+        - name: S3Buckets__ChargebackEvidenceDocuments__SecretAccessKey
+          value: vault:qa/data/aws/payments/payments-api/aws_secret_access_key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: payments-api
+  namespace: payments
+  labels:
+    Domain: payments-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: payments-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 6000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payments-api
+  namespace: payments
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payments-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

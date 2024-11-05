@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  highcharts-export
+  labels:
+    app: highcharts-export
+    env: qa
+  namespace: utils
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: highcharts-export
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: highcharts-export
+      labels:
+        env: qa
+        app: highcharts-export
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: highcharts-export
+        image: steblynskyi-docker.jfrog.io/highcharts-export-server:247b62
+        imagePullPolicy: Always
+        resources:
+          requests:
+             cpu: 10m
+             memory: 64Mi
+          limits:
+             cpu: 250m
+             memory: 800Mi
+        ports:
+        - containerPort: 8080
+          name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: highcharts-export
+  namespace: utils
+  labels:
+    Domain: utils-highcharts-export.qa-steblynskyi.com
+spec:
+  selector:
+    app: highcharts-export
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: highcharts-export
+  namespace: utils
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: highcharts-export
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

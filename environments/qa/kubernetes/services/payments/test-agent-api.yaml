@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-agent-api
+  labels:
+    app: test-agent-api
+    env: qa
+  namespace: payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: test-agent-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: test-agent-api
+      labels:
+        env: qa
+        app: test-agent-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: test-agent-api
+        image: steblynskyi-docker.jfrog.io/payments-test-agent-api:77cbcf4
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: NODE_ENV
+          value: QA
+        - name: BE_CLIENT_URL
+          value: https://payments-test-property.client.qa-steblynskyi.com/
+        - name: center_URL
+          value: https://app.qa-steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: test-agent-api
+  namespace: payments
+  labels:
+    Domain: payments-test-agent-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: test-agent-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 3000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: test-agent-api
+  namespace: payments
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: test-agent-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

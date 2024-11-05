@@ -1,0 +1,109 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  internal-support-manager
+  labels:
+    app: internal-support-manager
+    env: qa
+  namespace: ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: internal-support-manager
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: internal-support-manager
+      labels:
+        env: qa
+        app: internal-support-manager
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: internal-support-manager
+        image: steblynskyi-docker.jfrog.io/ops-internal-support-manager:933b862
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: QA
+          - name: SMALLTOOLS_DB_USERNAME
+            value: "vault:qa/data/rds/postgresql_smalltools/smalltools/username"
+          - name: SMALLTOOLS_DB_PASSWORD
+            value: "vault:qa/data/rds/postgresql_smalltools/smalltools/password"
+          - name: AWS_ACCESS_KEY_ID
+            value: "vault:qa/data/aws/ops/internal-support-manager/aws_access_key_id"
+          - name: AWS_SECRET_ACCESS_KEY
+            value: "vault:qa/data/aws/ops/internal-support-manager/aws_secret_access_key"
+          - name: AWS_REGION
+            value: us-east-1
+          - name: "AllowedHosts"
+            value: "*"
+          - name: "AWS__AccessKeyId"
+            value: "vault:qa/data/aws/ops/internal-support-manager/aws_access_key_id"
+          - name: "AWS__SecretAccessKey"
+            value: "vault:qa/data/aws/ops/internal-support-manager/aws_secret_access_key"
+          - name: "AWS__Region"
+            value: "us-east-1"
+          - name: "ConnectionStrings__Smalltools"
+            value: "Server=small-tools-db.qa-steblynskyi.com;Database=smalltools;User Id=$(SMALLTOOLS_DB_USERNAME);Password=$(SMALLTOOLS_DB_PASSWORD);Application Name=InternalSupportManager;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: internal-support-manager
+  namespace: ops
+  labels:
+    Domain: ops-internalsupport.qa-steblynskyi.com
+spec:
+  selector:
+    app: internal-support-manager
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: internal-support-manager
+  namespace: ops
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: internal-support-manager
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

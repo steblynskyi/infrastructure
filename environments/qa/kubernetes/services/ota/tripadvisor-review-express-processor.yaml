@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tripadvisor-review-express-processor
+  labels:
+    app: tripadvisor-review-express-processor
+    env: qa
+  namespace: ota
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tripadvisor-review-express-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: tripadvisor-review-express-processor
+      labels:
+        env: qa
+        app: tripadvisor-review-express-processor
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: tripadvisor-review-express-processor
+        image: steblynskyi-docker.jfrog.io/ota-tripadvisor-review-express-processor:e266b01d0
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 250Mi
+        ports:
+          - containerPort: 5000
+            name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: center_INNSYNC_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/innSyncDb/username"
+        - name: center_INNSYNC_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/innSyncDb/password"
+        - name: ConnectionStrings__innSyncDb
+          value: "Server=sql-center.qa-steblynskyi.com;User Id=$(center_INNSYNC_DB_USERNAME);password=$(center_INNSYNC_DB_PASSWORD);Database=innSyncDb;MultipleActiveResultSets=True;Application Name=ota-tripadvisor-review-express-processor;Encrypt=Optional;TrustServerCertificate=Yes;"
+        - name: EndPoints__PmsApi
+          value: "https://be-core-api.qa-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: tripadvisor-review-express-processor
+  namespace: ota
+  labels:
+    Domain: ota-tripadvisor-review-express-processor.qa-steblynskyi.com
+spec:
+  selector:
+    app: tripadvisor-review-express-processor
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort

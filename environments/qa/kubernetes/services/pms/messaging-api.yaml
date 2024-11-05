@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: messaging-api
+  labels:
+    app: messaging-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: messaging-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: messaging-api
+      labels:
+        env: qa
+        app: messaging-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: messaging-api
+        image: steblynskyi-docker.jfrog.io/pms-messaging-api:c4ac1b0d
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:qa/data/aws/pms/messaging-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:qa/data/aws/pms/messaging-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: RESERVATION_MESSAGING_DB_USERNAME
+          value: "vault:qa/data/rds/postgresql-reservation/messaging/username"
+        - name: RESERVATION_MESSAGING_DB_PASSWORD
+          value: "vault:qa/data/rds/postgresql-reservation/messaging/password"
+        - name: center_RESERVATION_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/reservation/username"
+        - name: center_RESERVATION_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/reservation/password"
+        - name: ConnectionStrings__Messaging
+          value: "Server=reservation-db.qa-steblynskyi.com;User Id=$(RESERVATION_MESSAGING_DB_USERNAME);Password=$(RESERVATION_MESSAGING_DB_PASSWORD);Database=messaging;Application Name=pms-messaging-api;"
+        - name: ConnectionStrings__Hangfire
+          value: "Server=reservation-db.qa-steblynskyi.com;User Id=$(RESERVATION_MESSAGING_DB_USERNAME);Password=$(RESERVATION_MESSAGING_DB_PASSWORD);Database=messaging;Application Name=pms-messaging-api;"
+        - name: ConnectionStrings__center
+          value: "Server=sql-center.qa-steblynskyi.com;Database=center01p;User Id=$(center_RESERVATION_DB_USERNAME); password=$(center_RESERVATION_DB_PASSWORD);Connect Timeout=60; Application Name=pms-messaging-api;TrustServerCertificate=True"
+        - name: ConnectionStrings__RedisCache
+          value: "redis.qa-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: messaging-api
+  namespace: pms
+  labels:
+    Domain: pms-messaging-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: messaging-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: messaging-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: messaging-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

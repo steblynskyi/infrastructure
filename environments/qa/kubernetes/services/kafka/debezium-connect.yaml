@@ -1,0 +1,198 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debezium-connect
+  namespace: kafka
+  labels:
+        app: debezium-connect
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: debezium-connect
+  template:
+    metadata:
+      name: debezium-connect
+      labels:
+        app: debezium-connect
+    spec:
+      priorityClassName: system-cluster-critical
+      containers:
+        - name: debezium-connect
+          image: debezium/connect:1.9
+          ports:
+          - name: debezium
+            containerPort: 8083
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 2000Mi
+          env:
+          - name: GROUP_ID
+            value: "1"
+          - name: BOOTSTRAP_SERVERS
+            value: "kafka:9092"
+          - name: CONFIG_STORAGE_TOPIC
+            value: "debezium_connectors"
+          - name: OFFSET_STORAGE_TOPIC
+            value: "debezium_connectors_offsets"
+          - name: STATUS_STORAGE_TOPIC
+            value: "debezium_connectors_statuses"
+          - name: CONNECT_CONFIG_PROVIDERS
+            value: "file"
+          - name: CONNECT_CONFIG_PROVIDERS_FILE_CLASS
+            value: "org.apache.kafka.common.config.provider.FileConfigProvider"
+          - name: CONNECT_ERRORS_RETRY_TIMEOUT
+            value: "900000"
+          - name: CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR
+            value: "3"
+          - name: CONNECT_STATUS_STORAGE_REPLICATION_FACTOR
+            value: "3"
+          - name: CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR
+            value: "3"
+          - name: CONNECT_ERRORS_RETRY_TIMEOUT
+            value: "-1"
+          - name: JMX_PORT
+            value: "5555"
+          - name: JMX_HOST
+            value: "0.0.0.0"
+          volumeMounts:
+          - name: guestservices-db
+            mountPath: "/secrets/guestservices-db/"
+            readOnly: true
+          - name: guestprofile-db
+            mountPath: "/secrets/guestprofile-db/"
+            readOnly: true
+          - name: folio-db
+            mountPath: "/secrets/folio-db/"
+            readOnly: true
+          - name: reports-db
+            mountPath: "/secrets/reports-db/"
+            readOnly: true
+          - name: reservation-db
+            mountPath: "/secrets/reservation-db/"
+            readOnly: true
+          - name: center-db
+            mountPath: "/secrets/center-db/"
+            readOnly: true
+        - name: jmx-exporter
+          image: docker.io/bitnami/jmx-exporter:0.17.0-debian-11-r24
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+          command:
+            - java
+          args:
+            - -XX:+UnlockExperimentalVMOptions
+            - -XX:+UseCGroupMemoryLimitForHeap
+            - -XX:MaxRAMFraction=1
+            - -XshowSettings:vm
+            - -jar
+            - jmx_prometheus_httpserver.jar
+            - "5556"
+            - /etc/jmx-kafka-connect/jmx-kafka-connect-prometheus.yml
+          env:
+            - name: JMXPORT
+              value: "5556"
+            - name: JMXHOST
+              value: "0.0.0.0"
+          ports:
+            - name: metrics
+              containerPort: 5556
+          resources:
+            limits: {}
+            requests: {}
+          volumeMounts:
+            - name: jmx-kafka-connect
+              mountPath: /etc/jmx-kafka-connect
+      volumes:
+        - name: guestservices-db
+          secret:
+            secretName: guestservices-db
+        - name: guestprofile-db
+          secret:
+            secretName: guestprofile-db
+        - name: folio-db
+          secret:
+            secretName: folio-db
+        - name: reports-db
+          secret:
+            secretName: reports-db
+        - name: reservation-db
+          secret:
+            secretName: reservation-db
+        - name: center-db
+          secret:
+            secretName: center-db
+        - name: jmx-kafka-connect
+          configMap:
+            name: jmx-kafka-connect
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: debezium-connect
+  namespace: kafka
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  labels:
+    Domain: kafka-debezium-connect.qa-steblynskyi.com
+spec:
+  selector:
+    app: debezium-connect
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 8083
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-connect-jmx-metrics
+  namespace: kafka
+  labels:
+    app: kafka-connect-jmx-metrics
+  annotations:
+    steblynskyi.io/scrape: "true"
+    kafka.io/metric_path: "/"
+    kafka.io/scrape_port: '5556'
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+    - name: http-metrics
+      port: 5556
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    app: debezium-connect
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: debezium-connect
+  namespace: kafka
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: debezium-connect
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 900Mi

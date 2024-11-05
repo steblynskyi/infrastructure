@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  ip-monitoring-service-api
+  labels:
+    app: ip-monitoring-service-api
+    env: qa
+  namespace: ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ip-monitoring-service-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: ip-monitoring-service-api
+      labels:
+        env: qa
+        app: ip-monitoring-service-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: ip-monitoring-service-api
+        image: steblynskyi-docker.jfrog.io/ops-ip-monitoring-service-api:b0eda27
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: QA
+          - name: INTERNALTOOLS_IPMONITORING_DB_USERNAME
+            value: "vault:qa/data/rds/sql-internaltools/ipmonitoring/username"
+          - name: INTERNALTOOLS_IPMONITORING_DB_PASSWORD
+            value: "vault:qa/data/rds/sql-internaltools/ipmonitoring/password"
+          - name: "ConnectionStrings__IpMonitoring"
+            value: "Server=internal-tools-db.qa-steblynskyi.com;Database=IPMonitorDb;User Id=$(INTERNALTOOLS_IPMONITORING_DB_USERNAME);Password=$(INTERNALTOOLS_IPMONITORING_DB_PASSWORD);"
+          - name: "Logging__LogLevel__Default"
+            value: "Information"
+          - name: "Logging__LogLevel__Microsoft.AspNetCore"
+            value: "Warning"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: ip-monitoring-service-api
+  namespace: ops
+  labels:
+    Domain: ops-ip-monitoring-service-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: ip-monitoring-service-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ip-monitoring-service-api
+  namespace: ops
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ip-monitoring-service-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-query-api
+  labels:
+    app: account-query-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: account-query-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: account-query-api
+      labels:
+        env: qa
+        app: account-query-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: account-query-api
+        image: steblynskyi-docker.jfrog.io/pms-account-query-api:c400b23
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 448Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: INN_MSSQL_SERVER
+          value: sql-center.qa-steblynskyi.com
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: INN_MSSQL_DATABASE
+          value: center01p
+        - name: INN_MSSQL_USER
+          value: $(center_DB_USERNAME)
+        - name: INN_MSSQL_PASSWORD
+          value: $(center_DB_PASSWORD)
+        - name: INN_LOG_FLUENT_HOST
+          value: utils-fluentd-logging.qa-steblynskyi.com
+        - name: INN_LOG_LEVEL
+          value: DEBUG
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: account-query-api
+  namespace: pms
+  labels:
+    Domain: pms-account-query-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: account-query-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: account-query-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: account-query-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 384Mi

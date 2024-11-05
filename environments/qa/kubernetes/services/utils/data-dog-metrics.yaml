@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datadog-metrics
+  labels:
+    app: datadog-metrics
+    env: qa
+  namespace: utils
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: datadog-metrics
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: datadog-metrics
+      labels:
+        env: qa
+        app: datadog-metrics
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: datadog-metrics
+        image: steblynskyi-docker.jfrog.io/utils-datadog-metrics:3a2984e
+        imagePullPolicy: IfNotPresent
+        resources:
+         requests:
+            cpu: 25m
+            memory: 32Mi
+         limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: MSSQL_USER
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: MSSQL_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: MSSQL_SERVER
+          value: "sql-center.qa-steblynskyi.com"
+        - name: MSSQL_PORT
+          value: "1433"
+        - name: MSSQL_DATABASE
+          value: "center01p"
+        - name: SERVICE_PORT
+          value: "9464"

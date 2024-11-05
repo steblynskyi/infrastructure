@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubernetes-dashboard-proxy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: oidc-onelogin-readonly
+subjects:
+  - kind: ServiceAccount
+    name: kubernetes-dashboard-proxy
+    namespace: kubernetes-dashboard
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubernetes-dashboard-proxy
+  namespace: kubernetes-dashboard
+  labels:
+    app: kubernetes-dashboard-proxy
+    env: qa

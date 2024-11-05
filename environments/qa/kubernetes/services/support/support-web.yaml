@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  support-web
+  labels:
+    app: support-web
+    env: qa
+  namespace: support
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: support-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: support-web
+      labels:
+        env: qa
+        app: support-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: support-web
+        image: steblynskyi-docker.jfrog.io/support-web:237e54c8
+        imagePullPolicy: Always
+        args:
+        - -base-path=/
+        resources:
+          requests:
+              cpu: 50m
+              memory: 64Mi
+          limits:
+              cpu: 250m
+              memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+          - name: APP_OPEN_ID_API_URL
+            value: https://be-auth-openid-api.qa-steblynskyi.com/loginapi/OpenIdLogin
+          - name: APP_SUPPORT_NODE_API
+            value: https://support-api.qa-steblynskyi.com
+          - name: APP_center_API_BASE_URL
+            value: https://app.qa-steblynskyi.com
+          - name: APP_OTA_PUBLIC_API_URL
+            value: https://ota-public-api.qa-steblynskyi.com/api/v1
+          - name: APP_OTA_CORE_API_URL
+            value: https://ota-core-api.qa-steblynskyi.com/api/v1
+          - name: APP_PROVISION_BOOKINGENGINE_DOMAIN
+            value: .client.qa-steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: support-web
+  namespace: support
+  labels:
+    Domain: support-web.qa-steblynskyi.com
+spec:
+  selector:
+    app: support-web
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: support-web
+  namespace: support
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: support-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 230m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

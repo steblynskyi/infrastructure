@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-category-api
+  labels:
+    app: task-category-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: task-category-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: task-category-api
+      labels:
+        env: qa
+        app: task-category-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: task-category-api
+        image: steblynskyi-docker.jfrog.io/pms-task-category-api:2ff3500
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 384Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: INN_LOG_FLUENT_HOST
+          value: utils-fluentd-logging.qa-steblynskyi.com
+        - name: INN_LOG_LEVEL
+          value: DEBUG
+        - name: INN_TASK_CATEGORY_API
+          value: https://pms-task-category-api.qa-steblynskyi.com/property/{}/category
+        - name: RESERVATION_GUESTSERVICES_DB_USERNAME
+          value: "vault:qa/data/rds/postgresql-reservation/guestservices/username"
+        - name: RESERVATION_GUESTSERVICES_DB_PASSWORD
+          value: "vault:qa/data/rds/postgresql-reservation/guestservices/password"
+        - name: INN_AWS_APP_KEY
+          value: "vault:qa/data/aws/pms/task-category-api/aws_access_key_id"
+        - name: INN_AWS_SECRET_KEY
+          value: "vault:qa/data/aws/pms/task-category-api/aws_secret_access_key" 
+        - name: INN_AWS_REGION
+          value: us-east-1
+        - name: INN_LOG_GROUP
+          value: qa/gs/pms-task-category-api
+        - name: INN_GUEST_SERVICES_DB_USER
+          value: $(RESERVATION_GUESTSERVICES_DB_USERNAME)
+        - name: INN_GUEST_SERVICES_DB_PASSWORD
+          value: $(RESERVATION_GUESTSERVICES_DB_PASSWORD)
+        - name: INN_GUEST_SERVICES_DB_HOST
+          value: reservation-db.qa-steblynskyi.com
+        - name: INN_GUEST_SERVICES_DB_NAME
+          value: guestservices
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: task-category-api
+  namespace: pms
+  labels:
+    Domain: pms-task-category-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: task-category-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: task-category-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: task-category-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 320Mi

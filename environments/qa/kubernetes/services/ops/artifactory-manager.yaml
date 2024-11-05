@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: artifactory-manager
+  labels:
+    app: artifactory-manager
+    env: qa
+  namespace: ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: artifactory-manager
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: artifactory-manager
+      labels:
+        app: artifactory-manager
+        env: qa
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: artifactory-manager
+          image: steblynskyi-docker.jfrog.io/ops-artifactory-manager:8287089
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: KUBE_CONFIG
+              value: /home/.kube/qaops-kubeconfig
+            - name: OIDC_REDIRECT_URI
+              value: https://ops-artifactory-manager.qa-steblynskyi.com/oauth/callback
+            - name: OIDC_CLIENT_ID
+              value: here
+            - name: OIDC_CLIENT_SECRET
+              value: here
+            - name: JFROG_ACCESS_TOKEN
+              value: here
+            - name: MASK_KEYS
+              value: ACCESS,PASSWORD,SECRET,ConnectionStrings__centerDB,AppSettings__centerDbConnectionString,INN_EMAIL_NOTIFICATIONS_DB,ConnectionStrings__Hangfire,ConnectionStrings__center,ConnectionStrings__InnSights,SERVICESTACK_LICENSE,PWD,MSSQL_HOST,ConnectionStrings__UnitOwners,ConnectionStrings__GblDb,TravelPartnerClientConfiguration__PrivateKey,STRIPE__APIKEY,ReservationsPrivateApi__Key,ReservationApiSettings__PrivateAuthenticationApiKey,ReservationApiSettings__B2BBookingEngineConfigurationApiKey,ConnectionStrings__CreditCardToken,APP_GOOGLE_TAG_MANAGER_KEY,ConnectionStrings__steblynskyiPaymentsDb,IdentityServerSettings__ClientSecret,CLIENTSETTINGS__SECRETS__5__CLIENTSECRET
+          volumeMounts:
+            - name:  kubeconfig
+              mountPath:  /home/.kube/
+      volumes:
+        - name: kubeconfig
+          secret:
+              defaultMode: 420
+              optional: false
+              secretName:  qaops-app-kubeconfig
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: artifactory-manager
+  namespace: ops
+  labels:
+    Domain: ops-artifactory-manager.qa-steblynskyi.com
+spec:
+  selector:
+    app: artifactory-manager
+    env: qa
+  ports:
+    - port: 80
+      name: http
+      targetPort: 3000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: artifactory-manager
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: artifactory-manager
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

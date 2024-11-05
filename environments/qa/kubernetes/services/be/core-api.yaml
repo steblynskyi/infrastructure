@@ -1,0 +1,137 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-api
+  labels:
+    app: core-api
+    env: qa
+  namespace: be
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: core-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: core-api
+      labels:
+        env: qa
+        app: core-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: core-api
+        image: steblynskyi-docker.jfrog.io/be-core-api:2becfb0
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /be-core/health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /be-core/health/status
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 20
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 512Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:qa/data/aws/be/core-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:qa/data/aws/be/core-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: S3Buckets__RoomClass__Name
+          value: "steblynskyi-qa-standard-pms-roomclass-images"
+        - name: S3Buckets__RoomClass__Url
+          value: "https://s3.amazonaws.com/steblynskyi-qa-standard-pms-roomclass-images"
+        - name: ConnectionStrings__centerDb
+          value: "Server=sql-center.qa-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;pooling=true;MultipleActiveResultSets=True;Application Name=steblynskyi.Api;Max Pool Size=250;TrustServerCertificate=Yes;"
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /be-core/health/live
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: core-api
+  namespace: be
+  labels:
+    Domain: be-core-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: core-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: core-api
+  namespace: be
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: core-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 480Mi

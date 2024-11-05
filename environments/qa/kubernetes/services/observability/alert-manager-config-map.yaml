@@ -1,0 +1,31 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: alert-manager-config
+  namespace: observability
+data:
+  config.yml: |-
+    global:
+    templates:
+      - '/etc/alert-manager/*.tmpl'
+    route:
+      receiver: 'alert-pagerduty'
+      group_by: ['cluster', 'alertname', 'priority']
+      group_wait: 10s
+      repeat_interval: 3h
+      group_interval: 5m
+      routes:
+        - match:
+            severity: 'payments-alert'
+          receiver: alert-pagerduty
+    receivers:
+      - name: alert-pagerduty
+        pagerduty_configs:
+          - service_key: '123'
+            details:
+              message: '{{ .CommonLabels.alertname }} for user {{ .CommonLabels.user_login_id }}'
+              user_login_id: '{{ .CommonLabels.user_login_id }}'
+              firing: '{{ template "pagerduty.default.instances" .Alerts.Firing }}'
+              resolved: '{{ template "pagerduty.default.instances" .Alerts.Resolved }}'
+              num_firing: '{{ .Alerts.Firing | len }}'
+              num_resolved: '{{ .Alerts.Resolved | len }}'

@@ -1,0 +1,111 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-engine-configuration-api
+  labels:
+    app: booking-engine-configuration-api
+    env: qa
+  namespace: b2b
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: booking-engine-configuration-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: booking-engine-configuration-api
+      labels:
+        env: qa
+        app: booking-engine-configuration-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: booking-engine-configuration-api
+        image: steblynskyi-docker.jfrog.io/b2b-booking-engine-configuration-api:f0f602c
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /health/status
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "QA"
+        - name: AWS_ACCESS_KEY_ID
+          value: "vault:qa/data/aws/b2b/booking-engine-configuration-api/aws_access_key_id"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "vault:qa/data/aws/b2b/booking-engine-configuration-api/aws_secret_access_key"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: ConnectionStrings__centerDb
+          value: "Server=sql.qa-steblynskyi.com;User ID=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD);Initial Catalog=center01p;pooling=true;MultipleActiveResultSets=True;Application Name=steblynskyi.b2b.bookingengine.configuration;Max Pool Size=250;TrustServerCertificate=Yes;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /health/status
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: booking-engine-configuration-api
+  namespace: b2b
+  labels:
+    Domain: b2b-booking-engine-configuration-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: booking-engine-configuration-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: booking-engine-configuration-api
+  namespace: b2b
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: booking-engine-configuration-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

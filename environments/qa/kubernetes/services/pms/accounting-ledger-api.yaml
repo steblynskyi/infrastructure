@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: accounting-ledger-api
+  labels:
+    app: accounting-ledger-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: accounting-ledger-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: accounting-ledger-api
+      labels:
+        env: qa
+        app: accounting-ledger-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: accounting-ledger-api
+        image: steblynskyi-docker.jfrog.io/pms-accounting-ledger-api:d493b7b
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 512Mi
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            port: http
+            scheme: HTTP
+            path: /ledger/health/status
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: AppSettings__centerDbConnectionString
+          value: Server=sql-center.qa-steblynskyi.com;Database=center01p;User Id=$(center_DB_USERNAME); password=$(center_DB_PASSWORD);Application Name=pms-accounting-ledgerapi;
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /ledger/health/status
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: accounting-ledger-api
+  namespace: pms
+  labels:
+    Domain: pms-accounting-ledger-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: accounting-ledger-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: accounting-ledger-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: accounting-ledger-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

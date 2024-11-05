@@ -1,0 +1,41 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: google-booking-links-web
+  namespace: integrations
+  labels:
+    app: google-booking-links-web
+    env: qa
+spec:
+  serviceRef:
+    name: google-booking-links-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Setup-Google-Booking-Web-QA/3cb37d5c3d92d4d9
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: lightspeed-web
+  namespace: integrations
+  labels:
+    app: lightspeed-web
+    env: qa
+spec:
+  serviceRef:
+    name: lightspeed-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Setup-LightSpeed-Web-QA/a6ba2a38540498cc
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: email-web
+  namespace: integrations
+  labels:
+    app: email-web
+    env: qa
+spec:
+  serviceRef:
+    name: email-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Integrations-Email-WEB-QA/5fba5eef5d28a27e

@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database-api
+  labels:
+    app: database-api
+    env: qa
+  namespace: ops
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: database-api
+      labels:
+        app: database-api
+        env: qa
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: database-api
+          image: steblynskyi-docker.jfrog.io/ops-database-api:e704571
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: QA
+            - name: center_RESERVATION_DB_USERNAME
+              value: "vault:qa/data/rds/sql-center/reservation/username"
+            - name: center_RESERVATION_DB_PASSWORD
+              value: "vault:qa/data/rds/sql-center/reservation/password"
+            - name: "ConnectionStrings__centerDb"
+              value: "Server=sql-center.qa-steblynskyi.com;User ID=$(center_RESERVATION_DB_USERNAME);Password=$(center_RESERVATION_DB_PASSWORD);Initial Catalog=center01p;pooling=true;MultipleActiveResultSets=True;Application Name=ops.database.api;Max Pool Size=250;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: database-api
+  namespace: ops
+  labels:
+    Domain: ops-database-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: database-api
+    env: qa
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: database-api
+  namespace: ops
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: database-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

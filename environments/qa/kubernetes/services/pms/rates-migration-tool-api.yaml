@@ -1,0 +1,123 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rates-migration-tool-api
+  labels:
+    app: rates-migration-tool-api
+    env: qa
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rates-migration-tool-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: rates-migration-tool-api
+      labels:
+        env: qa
+        app: rates-migration-tool-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: rates-migration-tool-api
+        image: steblynskyi-docker.jfrog.io/pms-rates-migration-tool-api:1881c0cce
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: QA
+        - name: center_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/center01p/username"
+        - name: center_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/center01p/password"
+        - name: INNSYNC_DB_USERNAME
+          value: "vault:qa/data/rds/sql-center/innSyncDb/username"
+        - name: INNSYNC_DB_PASSWORD
+          value: "vault:qa/data/rds/sql-center/innSyncDb/password"
+        - name: INNSIGHTS_DB_USERNAME
+          value: "vault:qa/data/rds/postgresql-innsights/innSights/username"
+        - name: INNSIGHTS_DB_PASSWORD
+          value: "vault:qa/data/rds/postgresql-innsights/innSights/password"
+        - name: RESERVATION_RATEENGINE_DB_USERNAME
+          value: "vault:qa/data/rds/postgresql-reservation/rateengine/username"
+        - name: RESERVATION_RATEENGINE_DB_PASSWORD
+          value: "vault:qa/data/rds/postgresql-reservation/rateengine/password"
+        - name: ConnectionStrings__center
+          value: Server=sql-center.qa-steblynskyi.com;Database=center01p;User Id=$(center_DB_USERNAME);Password=$(center_DB_PASSWORD); Application Name=pms-rates-migration-tool-api; TrustServerCertificate=true;
+        - name: ConnectionStrings__InnSyncDb
+          value: Server=sql-center.qa-steblynskyi.com;Database=innSyncDb;User Id=$(INNSYNC_DB_USERNAME);Password=$(INNSYNC_DB_PASSWORD); Application Name=pms-rates-migration-tool-api; TrustServerCertificate=true;
+        - name: ConnectionStrings__InnSights
+          value: Host=innsights-db.qa-steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD); Application Name=pms-rates-migration-tool-api
+        - name: ConnectionStrings__History
+          value: Host=reservation-db.qa-steblynskyi.com;Port=5432;Database=rateengine;Username=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD); Application Name=pms-rates-migration-tool-api
+        - name: MigrationToolApiSettings__centerUrl
+          value: "https://app.qa-steblynskyi.com"
+        - name: MigrationToolApiSettings__BookingEngineApiUrl
+          value: "https://be-booking-engine-api.qa-steblynskyi.com"
+        - name: MigrationToolApiSettings__BookingEngineSourceDomainName
+          value: "client.qa-steblynskyi.com"
+        - name: MigrationToolApiSettings__PmsCoreApi
+          value: "https://be-core-api.qa-steblynskyi.com"
+        - name: MigrationToolApiSettings__RateEngineUrl
+          value: "https://pms-rate-engine-api.qa-steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: rates-migration-tool-api
+  namespace: pms
+  labels:
+    Domain: pms-rates-migration-tool-api.qa-steblynskyi.com
+spec:
+  selector:
+    app: rates-migration-tool-api
+    env: qa
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rates-migration-tool-api
+  namespace: pms
+spec:
+  maxReplicas: 2
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rates-migration-tool-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 980Mi
