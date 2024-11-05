@@ -38,7 +38,7 @@
         "ec2:Describe*"
       ],
       "Resource": [
-        "arn:aws:s3:::steblynskyi-dev-codedeploy/*"
+        "arn:aws:s3:::steblynskyi-mgmt-codedeploy/*"
       ]
     },
     {

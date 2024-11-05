@@ -1,0 +1,26 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "sqs:SetQueueAttributes",
+                "sqs:ReceiveMessage",
+                "sqs:CreateQueue",
+                "sqs:DeleteMessage",
+                "sqs:SendMessage",
+                "sqs:GetQueueUrl",
+                "sqs:GetQueueAttributes",
+                "sqs:ChangeMessageVisibility",
+                "sqs:DeleteMessageBatch",
+                "sqs:SendMessageBatch",
+                "sqs:ChangeMessageVisibilityBatch"
+            ],
+            "Resource": [
+                 "arn:aws:sqs:us-east-1:123:Integrations-Email-API-SesDeliveryNotifications-QA",
+                 "arn:aws:sqs:us-east-1:123:MT-Integrations-Email-API-CreateDispatchCommandHandler-QA.fifo"
+            ]
+        }
+    ]
+}

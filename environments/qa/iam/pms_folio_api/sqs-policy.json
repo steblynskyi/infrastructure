@@ -1,0 +1,26 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "sqs:SetQueueAttributes",
+                "sqs:ReceiveMessage",
+                "sqs:CreateQueue",
+                "sqs:DeleteMessage",
+                "sqs:SendMessage",
+                "sqs:GetQueueUrl",
+                "sqs:GetQueueAttributes",
+                "sqs:ChangeMessageVisibility",
+                "sqs:DeleteMessageBatch",
+                "sqs:SendMessageBatch",
+                "sqs:ChangeMessageVisibilityBatch"
+            ],
+            "Effect": "Allow",
+            "Resource": [
+                 "arn:aws:sqs:us-east-1:123:FOLIO-AllEvents-QA.fifo",
+                 "arn:aws:sqs:us-east-1:123:FOLIO-AllEvents-QA_error.fifo",
+                 "arn:aws:sqs:us-east-1:123:FOLIO-AllEvents-QA_skipped.fifo"
+            ]
+        }
+    ]
+}

@@ -1,0 +1,11 @@
+{
+  "ApplicationId": {
+    "S": "stringtest"
+  },
+  "Entitlements": {
+    "S": "{'gs':['gs.an', 'gs.am']}"
+  },
+  "Id": {
+    "S": "stringtest"
+  }
+}

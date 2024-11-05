@@ -1,0 +1,11 @@
+{
+  "ApplicationId": {
+    "S": "pms.task.scheduler"
+  },
+  "Entitlements": {
+    "S": "{\"gs\":[\"gs.aj\",\"gs.ae\"]}"
+  },
+  "Id": {
+    "S": "pms.task.scheduler"
+  }
+}

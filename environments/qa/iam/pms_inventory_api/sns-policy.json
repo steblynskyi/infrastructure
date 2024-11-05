@@ -1,0 +1,30 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "sns:GetTopicAttributes",
+                "sns:Publish",
+                "sns:Subscribe"
+            ],
+            "Resource": [
+                "arn:aws:sns:us-east-1:123:RATES-RatePlanV1ChangedEvent-QA.fifo",
+                "arn:aws:sns:us-east-1:123:RATES-RatePlanV2ChangedEvent-QA.fifo",
+                "arn:aws:sns:us-east-1:123:RATES-RateOverrideRateEngineChangedEvent-QA.fifo",
+                "arn:aws:sns:us-east-1:123:RATES-RuleOverrideRateEngineChangedEvent-QA.fifo",
+                "arn:aws:sns:us-east-1:123:RATES-RatePlanRateEngineChangedEvent-QA.fifo",
+                "arn:aws:sns:us-east-1:123:MT-ReservationCreatedEvent-QA.fifo"
+            ]
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "sns:ListTopics"
+            ],
+            "Resource": "arn:aws:sns:us-east-1:123:*"
+        }
+    ]
+}

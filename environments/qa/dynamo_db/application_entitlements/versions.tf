@@ -5,7 +5,7 @@ terraform {
 
   backend "s3" {
     bucket  = "steblynskyi-infra"
-    key     = "terraform/dev/iam/roles.tfstate"
+    key     = "terraform/qa/dynamodb/application_entitlements.tfstate"
     region  = "us-east-1"
     profile = "taras"
   }

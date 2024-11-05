@@ -1,0 +1,11 @@
+{
+  "ApplicationId": {
+    "S": "pms.task.notes.importer"
+  },
+  "Entitlements": {
+    "S": "{\"gs\":[\"gs.ae\",\"gs.aj\"]}"
+  },
+  "Id": {
+    "S": "pms.task.notes.importer"
+  }
+}
