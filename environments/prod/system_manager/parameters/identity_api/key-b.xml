@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<key id="here" version="1">
+   <creationDate>2023-04-02T21:21:59.3511722Z</creationDate>
+   <activationDate>2023-04-04T21:13:27.1536278Z</activationDate>
+   <expirationDate>2023-07-01T21:21:59.3468924Z</expirationDate>
+   <descriptor deserializerType="Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel.AuthenticatedEncryptorDescriptorDeserializer, Microsoft.AspNetCore.DataProtection, Version=6.0.0.0, Culture=neutral, PublicKeyToken=here">
+      <descriptor>
+         <encryption algorithm="AES_256_CBC" />
+         <validation algorithm="HMACSHA256" />
+         <masterKey xmlns:p4="http://schemas.asp.net/2015/03/dataProtection" p4:requiresEncryption="true">
+            <!-- Warning: the key below is in an unencrypted form. -->
+            <value>here==</value>
+         </masterKey>
+      </descriptor>
+   </descriptor>
+</key>

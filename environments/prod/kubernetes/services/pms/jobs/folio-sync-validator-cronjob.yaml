@@ -1,0 +1,36 @@
+# This CronJob runs every day at 05:30am (11am IST) and runs Folio SyncValidator with command line arg "-1" (which runs tool once)
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: folio-sync-validator
+  namespace: pms
+  labels:
+    app: folio-sync-validator
+    env: prod
+spec:
+  schedule: "30 5 * * *"
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 120
+      template:
+        metadata:
+          name: folio-sync-validator
+        spec:
+          containers:
+          - image: steblynskyi-docker.jfrog.io/pms-folio-sync-validator:024639eb1
+            name: folio-sync-validator
+            command: ["/usr/bin/dotnet", "/app/steblynskyi.Folio.SyncValidator.dll"]
+            args: ["-1"]
+            env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ConnectionStrings__InnCenter
+              value: "Application Name=steblynskyi.Folio.SyncValidator.CronJob;data source=sql-inncenter.steblynskyi.com;User ID=here;Password=here;Initial Catalog=here;TrustServerCertificate=Yes;"
+            - name: ConnectionStrings__Folio
+              value: "Application Name=steblynskyi.Folio.SyncValidator.CronJob;Server=reservation-db.steblynskyi.com;User ID=here;Password=here;Database=folio;"
+          imagePullSecrets:
+          - name: steblynskyi
+          restartPolicy: OnFailure

@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: taxes-ui
+  labels:
+    app: taxes-ui
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: taxes-ui
+      labels:
+        app: taxes-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: taxes-ui
+          image: steblynskyi-docker.jfrog.io/pms-taxes-ui:a05dd3d
+          imagePullPolicy: Always
+          args:
+            - -base-path=/setup/taxes
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 250Mi
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: APP_INNCENTER_API_BASE_URL
+              value: https://app.steblynskyi.com
+            - name: APP_PMS_INNCENTER_API
+              value: https://pms-inncenter-api.steblynskyi.com/api/v1
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: taxes-ui
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: taxes-ui
+  namespace: pms
+  labels:
+    Domain: pms-taxes-ui.steblynskyi.com
+spec:
+  selector:
+    app: taxes-ui
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: taxes-ui
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: taxes-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

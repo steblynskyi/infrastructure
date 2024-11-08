@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: public-api
+  labels:
+    app: public-api
+    env: prod
+  namespace: ota
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: public-api
+      labels:
+        app: public-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: public-api
+          image: steblynskyi-docker.jfrog.io/ota-api-public:fd81cf251
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 100Mi
+            limits:
+              cpu: 250m
+              memory: 250Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          - name: AWS_ACCESS_KEY_ID
+            value: "here"
+          - name: AWS_SECRET_ACCESS_KEY
+            value: "here"
+          - name: AWS_REGION
+            value: "us-east-1"
+          - name: Airbnb__BookingFailureChannelWebhook
+            value: "https://steblynskyi.webhook.office.com/webhookb2/111"
+          - name: TripAdvisor__HotelInventoryOptions__S3BucketConfig__Name
+            value: "steblynskyi-prod-ota-public-tripadvisor"
+          - name: TripAdvisor__HotelInventoryOptions__S3BucketConfig__Url
+            value: "https://steblynskyi-prod-ota-public-tripadvisor.s3.amazonaws.com/"
+          - name: CacheConfiguration__CacheLifetimeSeconds
+            value: "43200"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: public-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: public-api
+  namespace: ota
+  labels:
+    Domain: ota-public-api.steblynskyi.com
+spec:
+  selector:
+    app: public-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: public-api
+  namespace: ota
+spec:
+  maxReplicas: 6
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: public-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 220m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

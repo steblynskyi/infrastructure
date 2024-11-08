@@ -20,7 +20,7 @@ variable "name" {
 
 variable "cidr" {
   description = "VPC IP address range, 65,534 usable ip"
-  default     = "10.20.0.0/16"
+  default     = "10.50.0.0/16"
 }
 
 variable "azs" {
@@ -32,7 +32,7 @@ variable "azs" {
 variable "private_subnets" {
   type        = list(string)
   description = "List of private subnets"
-  default     = ["10.20.2.0/24", "10.20.1.0/24"]
+  default     = ["10.50.2.0/24", "10.50.1.0/24"]
 }
 
 variable "subnet_private" {
@@ -43,7 +43,7 @@ variable "subnet_private" {
 variable "public_subnets" {
   type        = list(string)
   description = "List of public subnets"
-  default     = ["10.20.10.0/24", "10.20.11.0/24"]
+  default     = ["10.50.10.0/24", "10.50.11.0/24"]
 }
 
 variable "subnet_public" {
@@ -54,13 +54,13 @@ variable "subnet_public" {
 variable "database_subnets" {
   type        = list(string)
   description = "List of database subnets"
-  default     = ["10.20.15.0/24", "10.20.16.0/24"]
+  default     = ["10.50.15.0/24", "10.50.16.0/24"]
 }
 
 variable "elasticache_subnets" {
   type        = list(string)
   description = "List of subnet for elasticache"
-  default     = ["10.20.17.0/25", "10.20.17.128/25"]
+  default     = ["10.50.17.0/25", "10.50.17.128/25"]
 }
 
 variable "elasticache_subnets_desc" {

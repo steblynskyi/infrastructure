@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-monitor-api
+  labels:
+    app: security-monitor-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: security-monitor-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: security-monitor-api
+      labels:
+        env: prod
+        app: security-monitor-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "80"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: security-monitor-api
+        image: steblynskyi-docker.jfrog.io/pms-security-monitor-api:a05fe7a
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: security-monitor-api
+  namespace: pms
+  labels:
+    Domain: pms-security-monitor-api.steblynskyi.com
+spec:
+  selector:
+    app: security-monitor-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: security-monitor-api
+  namespace: pms
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: security-monitor-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

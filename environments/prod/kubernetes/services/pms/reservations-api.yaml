@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservations-api
+  labels:
+    app: reservations-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 4
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: reservations-api
+      labels:
+        app: reservations-api
+      annotations:
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+        steblynskyi.io/scrape: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: reservations-api
+          image: steblynskyi-docker.jfrog.io/pms-reservations-api:ad57835bc
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 120Mi
+            limits:
+              cpu: 300m
+              memory: 750Mi
+          ports:
+            - containerPort: 80
+              name: http
+            - containerPort: 9464
+              name: metrics
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_SECRET_ACCESS_KEY
+            value: here
+          - name: AWS_DEFAULT_REGION
+            value: us-east-1
+          - name: JobsSettings__User
+            value: "hangfireAdmin"
+          - name: INNCENTER_RESERVATION_DB_USERNAME
+            value: "here"
+          - name: INNCENTER_RESERVATION_DB_PASSWORD
+            value: "here"
+          - name: RESERVATION_DB_USERNAME
+            value: "here"
+          - name: RESERVATION_DB_PASSWORD
+            value: "here"
+          - name: RESERVATION_GUESTPROFILE_DB_USERNAME
+            value: "here"
+          - name: RESERVATION_GUESTPROFILE_DB_PASSWORD
+            value: "here"
+          - name: "ConnectionStrings__GuestProfile"
+            value: "Server=reservation-db.steblynskyi.com; User Id=$(RESERVATION_GUESTPROFILE_DB_USERNAME);Password=$(RESERVATION_GUESTPROFILE_DB_PASSWORD);Database=guestprofile;Application Name=pms-reservation-api;"
+          - name: "ConnectionStrings__Hangfire"
+            value: "Server=reservation-db.steblynskyi.com; User Id=$(RESERVATION_GUESTPROFILE_DB_USERNAME);Password=$(RESERVATION_GUESTPROFILE_DB_PASSWORD);Database=guestprofile;Application Name=pms-reservation-api;"
+          - name: "ConnectionStrings__InnCenter"
+            value: "Server=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_RESERVATION_DB_USERNAME);Password=$(INNCENTER_RESERVATION_DB_PASSWORD);Initial Catalog=here;Application Name=pms-reservation-api;TrustServerCertificate=True;"
+          - name: "ConnectionStrings__Reservation"
+            value: "Server=reservation-db.steblynskyi.com;User Id=$(RESERVATION_DB_USERNAME);Password=$(RESERVATION_DB_PASSWORD);Database=reservation;Application Name=pms-reservation-api;"
+          - name: ReservationApiSettings__B2BBookingEngineConfigurationApiKey
+            value: "here"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: reservations-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: reservations-api
+  namespace: pms
+  labels:
+    Domain: pms-reservations-api.steblynskyi.com
+spec:
+  selector:
+    app: reservations-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reservations-api
+  namespace: pms
+spec:
+  maxReplicas: 6
+  minReplicas: 4
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reservations-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 250m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 700Mi

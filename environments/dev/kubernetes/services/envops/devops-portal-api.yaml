@@ -45,7 +45,7 @@ spec:
         - name: DB_HOST
           value: devops-db.dev-steblynskyi.com:5432
         - name: DB_USER
-          value: syssteblynskyi_devops_portal
+          value: here_devops_portal
         - name: DB_PASSWORD
           value: none
         - name: DB_NAME

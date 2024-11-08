@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reports-export-api
+  labels:
+    app: reports-export-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: reports-export-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: reports-export-api
+      labels:
+        env: prod
+        app: reports-export-api
+      annotations:
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: reports-export-api
+        image: steblynskyi-docker.jfrog.io/pms-reports-export-api:a33ab28cc
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 800m
+            memory: 1400Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: reports-export-api
+  namespace: pms
+  labels:
+    Domain: pms-reports-export-api.steblynskyi.com
+spec:
+  selector:
+    app: reports-export-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reports-export-api
+  namespace: pms
+spec:
+  maxReplicas: 6
+  minReplicas: 4
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reports-export-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 750m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 1350Mi

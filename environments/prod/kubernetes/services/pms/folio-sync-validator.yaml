@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: folio-sync-validator
+  labels:
+    app: folio-sync-validator
+    env: prod
+  namespace: pms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: folio-sync-validator
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: folio-sync-validator
+      labels:
+        env: prod
+        app: folio-sync-validator
+      annotations:
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: folio-sync-validator
+        image: steblynskyi-docker.jfrog.io/pms-folio-sync-validator:d651dfdc5
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: ConnectionStrings__InnCenter
+          value: "Application Name=steblynskyi.Folio.SyncValidator;data source=sql-inncenter.steblynskyi.com;User ID=here;Password=here;Initial Catalog=here;TrustServerCertificate=Yes;"
+        - name: ConnectionStrings__Folio
+          value: "Application Name=steblynskyi.Folio.SyncValidator;Server=reservation-db.steblynskyi.com;User ID=herepgs_folio;Password=here;Database=folio;"

@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amenity-api
+  labels:
+    app: amenity-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: amenity-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: amenity-api
+      labels:
+        env: prod
+        app: amenity-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: amenity-api
+        image: steblynskyi-docker.jfrog.io/pms-amenity-api:2b86511
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: INNCENTER_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__InnCenterDb
+          value: "Application Name=pms-amenity-api;data source=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_DB_USERNAME);Password=$(INNCENTER_DB_PASSWORD);Initial Catalog=here;pooling=true;connection lifetime=120;max pool size=3000;TrustServerCertificate=Yes;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: amenity-api
+  namespace: pms
+  labels:
+    Domain: pms-amenity-api.steblynskyi.com
+spec:
+  selector:
+    app: amenity-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: amenity-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: amenity-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 280m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 500Mi

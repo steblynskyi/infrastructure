@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-api
+  labels:
+    app: identity-api
+    env: prod
+  namespace: identity
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: identity-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: identity-api
+      labels:
+        env: prod
+        app: identity-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: identity-api
+          image: steblynskyi-docker.jfrog.io/identity-api:56191f4
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 25m
+              memory: 100Mi
+            limits:
+              cpu: 150m
+              memory: 600Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: AWS__AccessKeyId
+              value: here
+            - name: AWS__SecretKey
+              value: here
+            - name: SecretsManager__CurrentKeySecretId
+              value: arn:aws:secretsmanager:us-east-1:123:secret:prod/identity/api-here
+            - name: SecretsManager__InnCenterCipherKeySecretId
+              value: arn:aws:secretsmanager:us-east-1:123:secret:prod/inncenter/cipherKey-here
+            - name: ConnectionStrings__InnCenterConnection
+              value: "Application Name=steblynskyi.Identity.Api;data source=sql-inncenter.steblynskyi.com;User ID=here;Password=here;Initial Catalog=here;pooling=true;connection lifetime=120;max pool size=3000;min pool size=50;"
+            - name: ConnectionStrings__IdentityConnection
+              value: "Application Name=steblynskyi.Identity.Api;data source=sql-inncenter.steblynskyi.com;User ID=here;Password=here;Initial Catalog=Identity;pooling=true;connection lifetime=120;max pool size=3000;min pool size=50;"
+            - name: RedisSettings__ConnectionString
+              value: "session.steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: identity-api
+  namespace: identity
+  labels:
+    Domain: identity-api.steblynskyi.com
+spec:
+  selector:
+    app: identity-api
+    env: prod
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: identity-api
+  namespace: identity
+spec:
+  maxReplicas: 9
+  minReplicas: 6
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: identity-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 130m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 570Mi

@@ -1,3 +1,12 @@
+resource "aws_route53_zone" "this" {
+  name = "dev-steblynskyi.com"
+
+  tags = {
+    Terraform = var.tag_terraform
+    Environment = var.environment
+  }
+}
+
 resource "aws_acm_certificate" "this" {
   domain_name               = "dev-steblynskyi.com"
   subject_alternative_names = ["*.dev-steblynskyi.com"]
@@ -23,7 +32,7 @@ resource "aws_route53_record" "this" {
   records         = [each.value.record]
   ttl             = 60
   type            = each.value.type
-  zone_id         = data.aws_route53_zone.domain.id
+  zone_id         = aws_route53_zone.domain.id
 }
 
 resource "aws_acm_certificate_validation" "this" {

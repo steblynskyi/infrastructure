@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluentd-logging
+  labels:
+    app: fluentd-logging
+    env: prod
+  namespace: utils
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: fluentd-logging
+      labels:
+        app: fluentd-logging
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: fluentd-logging
+          image: steblynskyi-docker.jfrog.io/devops-logging:v1.0.3
+          imagePullPolicy: Always
+          resources:
+          ports:
+            - containerPort: 24224
+              protocol: TCP
+          env:
+          - name: INN_ELASTICSEARCH_ENDPOINT
+            value: https://search-logging-fluentd-prod-jopjfmksxw2fahidxrfdmnn7tm.us-east-1.es.amazonaws.com
+          - name: INN_ELASTICSEARCH_REGION
+            value: us-east-1
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_SECRET_ACCESS_KEY
+            value: here
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: fluentd-logging

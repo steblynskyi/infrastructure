@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-api
+  labels:
+    app: core-api
+    env: prod
+  namespace: be
+spec:
+  replicas: 5
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: core-api
+      labels:
+        app: core-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: core-api
+          image: steblynskyi-docker.jfrog.io/be-core-api:5670ae221
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /be-core/health/live
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /be-core/health/status
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 150m
+              memory: 200Mi
+            limits:
+              cpu: 550m
+              memory: 900Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_SECRET_ACCESS_KEY
+            value: here
+          - name: AWS_REGION
+            value: us-east-1
+          - name: IdentityServerSettings__ApiBaseUrl
+            value: https://identity-api.steblynskyi.com
+          - name: INNCENTER_DB_USERNAME
+            value: "here"
+          - name: INNCENTER_DB_PASSWORD
+            value: "here"
+          - name: ConnectionStrings__InnCenterDb
+            value: "Server=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_DB_USERNAME);Password=$(INNCENTER_DB_PASSWORD);Initial Catalog=here;pooling=true;MultipleActiveResultSets=True;Application Name=be-core-api;Max Pool Size=250;Min Pool Size=50;TrustServerCertificate=Yes;"
+          - name: OomReporting__ReportingThresholdMb
+            value: "550"
+          - name: NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: core-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /be-core/health/live
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: core-api
+  namespace: be
+  labels:
+    Domain: be-core-api.steblynskyi.com
+spec:
+  selector:
+    app: core-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: core-api
+  namespace: be
+spec:
+  maxReplicas: 15
+  minReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: core-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 500m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 800Mi

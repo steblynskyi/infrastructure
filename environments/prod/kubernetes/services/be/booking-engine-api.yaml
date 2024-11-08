@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-engine-api
+  labels:
+    app: booking-engine-api
+    env: prod
+  namespace: be
+spec:
+  replicas: 5
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: booking-engine-api
+      labels:
+        app: booking-engine-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: booking-engine-api
+          image: steblynskyi-docker.jfrog.io/be-bookingengine-api:02a4d8c2
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 350m
+              memory: 700Mi
+          ports:
+            - containerPort: 9000
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: Authorization__Authority
+            value: https://identity-api.steblynskyi.com
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: booking-engine-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: booking-engine-api
+  namespace: be
+  labels:
+    Domain: be-booking-engine-api.steblynskyi.com
+spec:
+  selector:
+    app: booking-engine-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 9000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: booking-engine-api
+  namespace: be
+spec:
+  maxReplicas: 7
+  minReplicas: 5
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: booking-engine-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 300m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 650Mi

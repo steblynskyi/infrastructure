@@ -1,0 +1,58 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ota-ingress-internal
+  namespace: ota
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/tags: Environment=PROD,Name=OTA-Ingress-Internal
+    alb.ingress.kubernetes.io/subnets: subnet-1,subnet-2,subnet-3
+    alb.ingress.kubernetes.io/security-groups: sg-1
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-555
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80,"HTTPS":443}]'
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=false,access_logs.s3.bucket=steblynskyi-prod-kube-ingress-controller-logs,access_logs.s3.prefix=ota,deletion_protection.enabled=true,routing.http2.enabled=true,idle_timeout.timeout_seconds=120
+spec:
+  rules:
+  - host: ota-config-api.steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: config-api
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific
+  - host: ota-core-api.steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: core-api
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific
+  - host: ota-setup-web.steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: setup-web
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific
+  - host: ota-verticalbooking-reservation-poller.steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: verticalbooking-reservation-poller
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific

@@ -1,0 +1,78 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payments-ingress-internal
+  namespace: payments
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/tags: Environment=PROD,Name=Payments-Ingress-Internal
+    alb.ingress.kubernetes.io/subnets: subnet-1,subnet-2,subnet-3
+    alb.ingress.kubernetes.io/security-groups: sg-1
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-555
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80,"HTTPS":443}]'
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=false,access_logs.s3.bucket=steblynskyi-prod-kube-ingress-controller-logs,access_logs.s3.prefix=payments,deletion_protection.enabled=true,routing.http2.enabled=true,idle_timeout.timeout_seconds=120
+spec:
+  rules:
+  - host: payments-correction-tool-api.steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: correction-tool-api
+            port:
+                number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-reports-web.steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: reports-web
+            port:
+                number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-api.steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: payments-api
+            port:
+                number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-statement-api.steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: statement-api
+            port:
+                number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-hangfire-dashboard.steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: hangfire-dashboard
+            port:
+                number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: payments-credit-card-token-api.steblynskyi.com
+    http:
+      paths:
+        - backend:
+            service:
+              name: credit-card-token-api
+              port:
+                number: 80
+          path: /*
+          pathType: ImplementationSpecific

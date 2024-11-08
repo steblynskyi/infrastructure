@@ -1,0 +1,307 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-rates-ui-targetgroupbinding
+  namespace: pms
+  labels:
+    app: rates-ui
+    env: prod
+spec:
+  serviceRef:
+    name: rates-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Rates-UI-PROD/eed8d9a75fdf3b1f
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-inventory-api-targetgroupbinding
+  namespace: pms
+  labels:
+    app: inventory-api
+    env: prod
+spec:
+  serviceRef:
+    name: inventory-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Inventory-Api-PROD/7dad2b4710cc3490
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-guest-services-ui-targetgroupbinding
+  namespace: pms
+  labels:
+    app: guest-services-ui
+    env: prod
+spec:
+  serviceRef:
+    name: guest-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/GuestServices-UI-PROD/1c06e57789d3064e
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-admin-ui-targetgroupbinding
+  namespace: pms
+  labels:
+    app: admin-ui
+    env: prod
+spec:
+  serviceRef:
+    name: admin-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Admin-UI-PROD/286b2f69f15bfd40
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-reports-api-targetgroupbinding
+  namespace: pms
+  labels:
+    app: reports-api
+    env: prod
+spec:
+  serviceRef:
+    name: reports-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reports-API-PROD/79b1dd4d293fde67
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-reports-ui-targetgroupbinding
+  namespace: pms
+  labels:
+    app: reports-ui
+    env: prod
+spec:
+  serviceRef:
+    name: reports-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reports-UI-PROD/8e0abc5a651192c0
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-folio-api-targetgroupbinding
+  namespace: pms
+  labels:
+    app: folio-api
+    env: prod
+spec:
+  serviceRef:
+    name: folio-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Folio-API-PROD/0bf2e68c5ac2f87a
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-taxes-ui-targetgroupbinding
+  namespace: pms
+  labels:
+    app: taxes-ui
+    env: prod
+spec:
+  serviceRef:
+    name: taxes-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Taxes-UI-PROD/9d623dc3fe64231f
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-innsights-web-api-targetgroupbinding
+  namespace: pms
+  labels:
+    app: innsights-web-api
+    env: prod
+spec:
+  serviceRef:
+    name: innsights-web-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Innsights-Web-API-PROD/13d3b6682b986501
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-reservations-ui-targetgroupbinding
+  namespace: pms
+  labels:
+    app: reservations-ui
+    env: prod
+spec:
+  serviceRef:
+    name: reservations-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reservations-UI-PROD/031832824e926a18
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: reservations-blocks-ui
+  namespace: pms
+  labels:
+    app: reservations-blocks-ui
+    env: prod
+spec:
+  serviceRef:
+    name: reservations-blocks-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reservations-Blocks-UI-PROD/4c7552687d81154e
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-reservations-api-targetgroupbinding
+  namespace: pms
+  labels:
+    app: reservations-api
+    env: prod
+spec:
+  serviceRef:
+    name: reservations-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Reservations-API-PROD/b36c38f21667d967
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-quickbooks-web-targetgroupbinding
+  namespace: pms
+  labels:
+    app: quickbooks-web
+    env: prod
+spec:
+  serviceRef:
+    name: quickbooks-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Quickbooks-WEB-PROD/46ea1281ad012acc
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-unit-owners-api-targetgroupbinding
+  namespace: pms
+  labels:
+    app: unit-owners-api
+    env: prod
+spec:
+  serviceRef:
+    name: unit-owners-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Unit-Owners-API-PROD/2570ec09d50bd914
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-unit-owners-ui-targetgroupbinding
+  namespace: pms
+  labels:
+    app: unit-owners-ui
+    env: prod
+spec:
+  serviceRef:
+    name: unit-owners-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Unit-Owners-UI-PROD/043c404c9df203a1
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-messaging-api-targetgroupbinding
+  namespace: pms
+  labels:
+    app: messaging-api
+    env: prod
+spec:
+  serviceRef:
+    name: messaging-api
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Messaging-API-PROD/ebc40225eb620e84
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: pms-messaging-ui-targetgroupbinding
+  namespace: pms
+  labels:
+    app: messaging-ui
+    env: prod
+spec:
+  serviceRef:
+    name: messaging-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Messaging-UI-PROD/a9feff17447a62fb
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: custom-fields-ui
+  namespace: pms
+  labels:
+    app: custom-fields-ui
+    env: prod
+spec:
+  serviceRef:
+    name: custom-fields-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Custom-Fields-UI-PROD/6cb9ad4f7b253a07
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: inncenter-web
+  namespace: pms
+  labels:
+    app: inncenter-web
+    env: prod
+spec:
+  serviceRef:
+    name: inncenter-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Inncenter-Web-PROD/e7271d9be8cc4307
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: accounts-ui
+  namespace: pms
+  labels:
+    app: accounts-ui
+    env: prod
+spec:
+  serviceRef:
+    name: accounts-ui
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Accounts-UI-PROD/3bd72648864b38b8
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: extensions-remotelock-web
+  namespace: pms
+  labels:
+    app: extensions-remotelock-web
+    env: prod
+spec:
+  serviceRef:
+    name: extensions-remotelock-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Extensions-Remote-Lock-Web-PROD/32054a4865665ba6
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: extensions-templates-web
+  namespace: pms
+  labels:
+    app: extensions-templates-web
+    env: prod
+spec:
+  serviceRef:
+    name: extensions-templates-web
+    port: 80
+  targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/Extensions-Templates-Web-PROD/d07cdd4623b9a245

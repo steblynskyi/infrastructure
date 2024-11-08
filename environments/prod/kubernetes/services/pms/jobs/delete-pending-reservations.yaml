@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: delete-pending-reservations
+  namespace: pms
+spec:
+  schedule: "0 3 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: delete-pending-reservations
+              image: curlimages/curl
+              imagePullPolicy: IfNotPresent
+              command:
+                - /bin/sh
+                - -c
+                - date; echo "Start Delete Pending Reservations"; curl -X DELETE -d "" https://pms-reservations-api.steblynskyi.com/reservations/api/Janitor/deletePendingReservations
+          restartPolicy: OnFailure

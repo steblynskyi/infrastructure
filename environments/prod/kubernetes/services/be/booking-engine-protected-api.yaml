@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-engine-protected-api
+  labels:
+    app: booking-engine-protected-api
+    env: prod
+  namespace: be
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: booking-engine-protected-api
+      labels:
+        app: booking-engine-protected-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: booking-engine-protected-api
+          image: steblynskyi-docker.jfrog.io/be-booking-engine-protected-api:02a4d8c2
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 120Mi
+            limits:
+              cpu: 250m
+              memory: 450Mi
+          ports:
+            - containerPort: 9001
+              name: http
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: Authorization__Authority
+              value: https://identity-api.steblynskyi.com
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: booking-engine-protected-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: booking-engine-protected-api
+  namespace: be
+  labels:
+    Domain: be-booking-engine-protected-api.steblynskyi.com
+spec:
+  selector:
+    app: booking-engine-protected-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 9001
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: booking-engine-protected-api
+  namespace: be
+spec:
+  maxReplicas: 6
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: booking-engine-protected-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 200m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 300Mi

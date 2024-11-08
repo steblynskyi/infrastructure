@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lightspeed-background-processor
+  labels:
+    app: lightspeed-background-processor
+    env: prod
+  namespace: integrations
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lightspeed-background-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: lightspeed-background-processor
+      labels:
+        env: prod
+        app: lightspeed-background-processor
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: lightspeed-background-processor
+        image: steblynskyi-docker.jfrog.io/integrations-lightspeed-background-processor:75977b52
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: ConnectionStrings__Lightspeed
+          value: "Application Name=integrations-lightspeed-background-processor;Server=sql-inncenter.steblynskyi.com;User Id=here;password=here;Database=Lightspeed;MultipleActiveResultSets=True;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: lightspeed-background-processor
+  namespace: integrations
+  labels:
+    Domain: integrations-lightspeed-background-processor.steblynskyi.com
+spec:
+  selector:
+    app: lightspeed-background-processor
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort

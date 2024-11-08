@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservation-query-api
+  labels:
+    app: reservation-query-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: reservation-query-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: reservation-query-api
+      labels:
+        env: prod
+        app: reservation-query-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: reservation-query-api
+        image: steblynskyi-docker.jfrog.io/pms-reservation-query-api:cf2024e
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: ConnectionStrings__InnCenterDb
+          value: "Application Name=pms.reservation.query.api;data source=sql-inncenter.steblynskyi.com;User ID=here;Password=here;Initial Catalog=here;pooling=true;connection lifetime=120;max pool size=3000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: reservation-query-api
+  namespace: pms
+  labels:
+    Domain: pms-reservation-query-api.steblynskyi.com
+spec:
+  selector:
+    app: reservation-query-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reservation-query-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reservation-query-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 480Mi

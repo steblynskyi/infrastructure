@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-api
+  labels:
+    app: email-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: email-api
+      labels:
+        app: email-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: email-api
+          image: steblynskyi-docker.jfrog.io/pms-email-api:dca2e4c
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: 150m
+              memory: 350Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: INN_EMAIL_NOTIFICATIONS_DB
+            value: Host=reservation-db.steblynskyi.com;Database=pms_history;Username=here;Password=here;
+          - name: X_AMZ_SNS_SUBSCRIPTION_ARN
+            value: arn:aws:sns:us-east-1:123:Email-API-PROD:111-222-333-444-555555
+          - name: X_AMZ_SNS_TOPIC_ARN
+            value: arn:aws:sns:us-east-1:123:Email-API-PROD
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: email-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: email-api
+  namespace: pms
+  labels:
+    Domain: pms-email-api.steblynskyi.com
+spec:
+  selector:
+    app: email-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: email-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: email-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 130m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 300Mi

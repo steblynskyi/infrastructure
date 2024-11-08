@@ -1,0 +1,117 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unit-owners-api
+  labels:
+    app: unit-owners-api
+    env: prod
+  namespace: b2b
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: unit-owners-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: unit-owners-api
+      labels:
+        env: prod
+        app: unit-owners-api
+      annotations:
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: unit-owners-api
+        image: steblynskyi-docker.jfrog.io/b2b-unit-owners-api:30d2034
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /unit-owners-portal/health/live
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /unit-owners-portal/health/status
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: RedisCache__ConnectionString
+          value: "cache.steblynskyi.com"
+        - name: Endpoints__ConfigurationApi
+          value: https://b2b-booking-engine-configuration-api.steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /unit-owners-portal/health/live
+    alb.ingress.kubernetes.io/success-codes: 200-299
+  name: unit-owners-api
+  namespace: b2b
+  labels:
+    Domain: b2b-unit-owners-api.steblynskyi.com
+spec:
+  selector:
+    app: unit-owners-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: unit-owners-api
+  namespace: b2b
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: unit-owners-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

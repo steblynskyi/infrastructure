@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guest-navigation-api
+  labels:
+    app: guest-navigation-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: guest-navigation-api
+      labels:
+        app: guest-navigation-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: guest-navigation-api
+          image: steblynskyi-docker.jfrog.io/pms-guest-navigation-api:a57f9a6
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 150m
+              memory: 700Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: INN_MSSQL_SERVER
+            value: sql-inncenter.steblynskyi.com
+          - name: INN_MSSQL_DATABASE
+            value: here
+          - name: INN_MSSQL_USER
+            value: here
+          - name: INN_MSSQL_PASSWORD
+            value: here
+          - name: INN_LOG_FLUENT_HOST
+            value: utils-fluentd-logging.steblynskyi.com
+          - name: INN_LOG_LEVEL
+            value: DEBUG
+          - name: INN_AWS_APP_KEY
+            value: here
+          - name: INN_AWS_SECRET_KEY
+            value: here
+          - name: INN_AWS_REGION
+            value: us-east-1
+          - name: INN_LOG_GROUP
+            value: gs/pms-guest-navigation-api
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: guest-navigation-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: guest-navigation-api
+  namespace: pms
+  labels:
+    Domain: pms-guest-navigation-api.steblynskyi.com
+spec:
+  selector:
+    app: guest-navigation-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: guest-navigation-api
+  namespace: pms
+spec:
+  maxReplicas: 6
+  minReplicas: 4
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: guest-navigation-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 130m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 650Mi

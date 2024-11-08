@@ -1,0 +1,29 @@
+variable "region" {
+  description = "Which region environment will be created"
+  default     = "us-east-1"
+}
+
+variable "aws_profile" {
+  description = "AWS Profile name on local machine for multi aws account use"
+  default     = "taras"
+}
+
+variable "environment" {
+  description = "Environment name"
+  default     = "PROD"
+}
+
+variable "vpc_id" {
+  description = "PROD-VPC"
+  default     = "vpc-123"
+}
+
+variable "s3_name" {
+  description = "Default name of S3 bucket"
+  default     = "steblynskyi-prod-prometheus-storage"
+}
+
+variable "acl" {
+  description = "ACL Rules"
+  default     = "private" # Can be change to: "public-read or private"
+}

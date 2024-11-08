@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana-proxy
+  labels:
+    app: kibana-proxy
+    env: prod
+  namespace: utils
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: kibana-proxy
+      labels:
+        app: kibana-proxy
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: kibana-proxy
+          image: steblynskyi-docker.jfrog.io/kibana-proxy:v1.3
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: 250m
+              memory: 350Mi
+          ports:
+            - containerPort: 8080
+              name: http
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: kibana-proxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: kibana-proxy
+  namespace: utils
+  labels:
+    Domain: kibana-proxy.steblynskyi.com
+spec:
+  selector:
+    app: kibana-proxy
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort

@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservation-queue-processor
+  labels:
+    app: reservation-queue-processor
+    env: prod
+  namespace: be
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: reservation-queue-processor
+      labels:
+        app: reservation-queue-processor
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: reservation-queue-processor
+          image: steblynskyi-docker.jfrog.io/be-reservation-queue-processor:5670ae221
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 600m
+              memory: 450Mi
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          - name: INNCENTER_DB_USERNAME
+            value: "here"
+          - name: INNCENTER_DB_PASSWORD
+            value: "here"
+          - name: ConnectionStrings__InnCenterDb
+            value: "Server=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_DB_USERNAME);Password=$(INNCENTER_DB_PASSWORD);Initial Catalog=here;pooling=true;MultipleActiveResultSets=True;Application Name=be-reservation-queue-processor;Max Pool Size=250;TrustServerCertificate=Yes;"
+          - name: AWS_ACCESS_KEY_ID
+            value: "here"
+          - name: AWS_SECRET_ACCESS_KEY
+            value: "here"
+          - name: AWS_REGION
+            value: "us-east-1"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: reservation-queue-processor

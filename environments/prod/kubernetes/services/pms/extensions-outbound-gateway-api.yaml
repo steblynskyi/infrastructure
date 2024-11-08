@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-outbound-gateway-api
+  labels:
+    app: extensions-outbound-gateway-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: extensions-outbound-gateway-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-outbound-gateway-api
+      labels:
+        env: prod
+        app: extensions-outbound-gateway-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-outbound-gateway-api
+        image: steblynskyi-docker.jfrog.io/pms-extensions-outbound-gateway-api:86d4ecd
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: INNCENTER_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__InnCenterDb
+          value: "Server=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_DB_USERNAME);Password=$(INNCENTER_DB_PASSWORD);Initial Catalog=here;pooling=true;MultipleActiveResultSets=True;Application Name=pms-extensions-outbound-gateway-api;Max Pool Size=250;Min Pool Size=50;TrustServerCertificate=Yes;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: extensions-outbound-gateway-api
+  namespace: pms
+  labels:
+    Domain: pms-extensions-outbound-gateway-api.steblynskyi.com
+spec:
+  selector:
+    app: extensions-outbound-gateway-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 5000
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: extensions-outbound-gateway-api
+  namespace: pms
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: extensions-outbound-gateway-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 280m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 480Mi

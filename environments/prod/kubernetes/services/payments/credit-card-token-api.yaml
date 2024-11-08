@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credit-card-token-api
+  labels:
+    app: credit-card-token-api
+    env: prod
+  namespace: payments
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: credit-card-token-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: credit-card-token-api
+      labels:
+        env: prod
+        app: credit-card-token-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: credit-card-token-api
+        image: steblynskyi-docker.jfrog.io/payments-credit-card-token-api:9cb5c0d
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 352Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: ConnectionStrings__CreditCardToken
+          value: "Application Name=steblynskyi.Payments.CreditCardToken.Api;Server=sql-inncenter.steblynskyi.com;User ID=here;Password=here;Database=here;MultipleActiveResultSets=True;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: credit-card-token-api
+  namespace: payments
+  labels:
+    Domain: payments-credit-card-token-api.steblynskyi.com
+spec:
+  selector:
+    app: credit-card-token-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: credit-card-token-api
+  namespace: payments
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: credit-card-token-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 220m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

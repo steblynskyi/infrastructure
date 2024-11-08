@@ -1,0 +1,25 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: alert-manager-config
+  namespace: observability
+data:
+  config.yml: |-
+    global:
+    templates:
+      - '/etc/alert-manager/*.tmpl'
+    route:
+      receiver: 'alert-pagerduty'
+      group_by: ['user_id', 'cluster', 'alertname', 'priority']
+      group_wait: 5s
+      group_interval: 5m
+      repeat_interval: 3h
+      routes:
+        - match:
+            severity: 'payments-alert'
+          receiver: alert-pagerduty
+    receivers:
+      - name: alert-pagerduty
+        pagerduty_configs:
+          - service_key: 'here'
+            send_resolved: false

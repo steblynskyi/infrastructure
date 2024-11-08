@@ -5,7 +5,7 @@ terraform {
 
   backend "s3" {
     bucket  = "steblynskyi-infra"
-    key     = "terraform/qa/system_manager/parameters/identiry_api.tfstate"
+    key     = "terraform/dev/system_manager/parameters/identiry_api.tfstate"
     region  = "us-east-1"
     profile = "taras"
   }

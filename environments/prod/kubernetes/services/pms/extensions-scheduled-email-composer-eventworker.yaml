@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-scheduled-email-composer-eventworker
+  labels:
+    app: extensions-scheduled-email-composer-eventworker
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: extensions-scheduled-email-composer-eventworker
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-scheduled-email-composer-eventworker
+      labels:
+        env: prod
+        app: extensions-scheduled-email-composer-eventworker
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-scheduled-email-composer-eventworker
+        image: steblynskyi-docker.jfrog.io/pms-extensions-scheduled-email-composer-eventworker:e37d637
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"

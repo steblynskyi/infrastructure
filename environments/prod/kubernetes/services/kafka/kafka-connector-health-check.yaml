@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-connector-health-check
+  labels:
+    app: kafka-connector-health-check
+    env: prod
+  namespace: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-connector-health-check
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: kafka-connector-health-check
+      labels:
+        env: prod
+        app: kafka-connector-health-check
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: kafka-connector-health-check
+        image: steblynskyi-docker.jfrog.io/kafka-connector-health-check:v1.0.0
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: ENVIRONMENT
+          value: "PROD"
+        - name: CONNECTOR_URL
+          value: https://kafka-debezium-connect.steblynskyi.com
+        - name: CRON_INTERVAL
+          value: '60'
+        - name: NOTIFICATION_FREQUNECY_MINS
+          value: '30'
+        - name: WEBHOOK_URL
+          value: "https://steblynskyi.webhook.office.com/webhookb2/01285025-0521-4b39-adc9-0b78fa4abf2a@5071755d-3d25-4950-82d2-94234830edfd/IncomingWebhook/6929522b90e44357b5f9ccea48bde49a/50dac9df-ec4d-4a64-b365-819b596834a5"

@@ -1,10 +1,3 @@
-# Uncommit it only when you're doing refresh from production DB snapshot. (Get latest snapshot from production DB)
-# data "aws_db_snapshot" "db_snapshot" {
-#   include_shared         = true
-#   snapshot_type          = "shared" # Can be "public, shared, manual, awsbackup, automated"
-#   db_snapshot_identifier = var.db_snapshot
-# }
-
 # RDS DB Configuration (we using snapshot if you need to create without snapshot you have to modify it)
 resource "aws_db_instance" "main" {
   instance_class               = var.instance_type

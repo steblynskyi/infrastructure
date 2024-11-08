@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-internal-api
+  labels:
+    app: email-internal-api
+    env: prod
+  namespace: integrations
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: email-internal-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: email-internal-api
+      labels:
+        env: prod
+        app: email-internal-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: email-internal-api
+        image: steblynskyi-docker.jfrog.io/integrations-email-internal-api:0977077
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 356Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: AWS_ACCESS_KEY_ID
+          value: "here"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "here"
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: AttachmentSettings__BucketName
+          value: "steblynskyi-prod-integrations-email-attachments"
+        - name: INNCENTER_EMAILDISPATCH_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_EMAILDISPATCH_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__EmailDb
+          value: "Application Name=integrations-email-internal-api;Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_EMAILDISPATCH_DB_USERNAME);password=$(INNCENTER_EMAILDISPATCH_DB_PASSWORD);Database=EmailDispatch;MultipleActiveResultSets=True;Encrypt=Optional;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: email-internal-api
+  namespace: integrations
+  labels:
+    Domain: integrations-email-internal-api.steblynskyi.com
+spec:
+  selector:
+    app: email-internal-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: email-internal-api
+  namespace: integrations
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: email-internal-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

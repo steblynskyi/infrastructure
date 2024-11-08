@@ -1,0 +1,46 @@
+<powershell>
+# Download steblynskyiServices from S3 Bucket
+aws s3 cp s3://steblynskyi-prod-service-bucket/PROD/steblynskyi.Services/Pms.Scheduling/ C:\steblynskyi.Services\Pms.Scheduling\ --recursive
+aws s3 cp s3://steblynskyi-prod-service-bucket/PROD/steblynskyi.Services/PMS.Reporting/ C:\steblynskyi.Services\PMS.Reporting\ --recursive
+
+# Install steblynskyiServices
+cd C:\Windows\Microsoft.NET\Framework\v4.0.30319
+.\installutil.exe -i "C:\steblynskyi.Services\Pms.Scheduling\steblynskyiSchedulerService.exe"
+.\installutil.exe -i "C:\steblynskyi.Services\PMS.Reporting\ReportingServiceHost.exe"
+
+# Add additional HDD
+$NewDiskNumber = 1
+$NewDiskLabel="Data"
+
+$diskpart_command = $Null
+$diskpart_command = @"
+SELECT DISK $NewDiskNumber
+ATTRIBUTES DISK CLEAR READONLY
+ONLINE DISK
+create partition primary
+list partition
+select partition 1
+format fs=NTFS quick
+assign letter=D
+"@
+$diskpart_command | diskpart
+
+Start-Sleep -s 150
+
+# Install SSM Agent latest version
+Invoke-WebRequest `
+	https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe `
+	-OutFile $env:USERPROFILE\Downloads\SSMAgent_latest.exe
+Start-Process `
+	-FilePath $env:USERPROFILE\Downloads\SSMAgent_latest.exe `
+	-ArgumentList "/S"
+
+# Join Instance to Domain Controller
+Tzutil /s "Eastern Standard Time"
+Set-DefaultAWSRegion -Region us-east-1
+Set-Variable -name instance_id -value (Invoke-Restmethod -uri http://169.254.169.254/latest/meta-data/instance-id)
+$Params = @{"directoryId"="${directoryId}";"directoryName"="${directoryName}";"directoryOU"="${directoryOU}"}
+New-SSMAssociation -InstanceId $instance_id -Name "steblynskyi-ad-join" -Parameter $Params
+
+Restart-Computer -force
+</powershell>

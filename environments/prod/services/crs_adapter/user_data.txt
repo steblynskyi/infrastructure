@@ -1,0 +1,21 @@
+<powershell>
+# Set ETC Time
+Tzutil /s "Eastern Standard Time"
+Rename-computer "CRS-Adapter"
+
+# Install SSM Agent Latest Version
+Invoke-WebRequest `
+	https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe `
+	-OutFile $env:USERPROFILE\Downloads\SSMAgent_latest.exe
+Start-Process `
+	-FilePath $env:USERPROFILE\Downloads\SSMAgent_latest.exe `
+	-ArgumentList "/S"
+
+# Join Instance to Domain Controller
+Set-DefaultAWSRegion -Region us-east-1
+Set-Variable -name instance_id -value (Invoke-Restmethod -uri http://169.254.169.254/latest/meta-data/instance-id)
+$Params = @{"directoryId"="${directoryId}";"directoryName"="${directoryName}";"directoryOU"="${directoryOU}"}
+New-SSMAssociation -InstanceId $instance_id -Name "steblynskyi-ad-join" -Parameter $Params
+
+Restart-Computer -force
+</powershell>

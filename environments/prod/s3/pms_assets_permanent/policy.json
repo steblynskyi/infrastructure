@@ -1,0 +1,18 @@
+{
+    "Version": "2008-10-17",
+    "Id": "BookingEnginePolicy",
+    "Statement": [
+        {
+            "Sid": "AllowBookingEngineContent",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "*"
+            },
+            "Action": "s3:GetObject",
+            "Resource": [
+                "arn:aws:s3:::steblynskyi-prod-pms-asset-permanent/property/*.be.*",
+                "arn:aws:s3:::steblynskyi-prod-pms-asset-permanent/client/*.b2b.*"
+            ]
+        }
+    ]
+}

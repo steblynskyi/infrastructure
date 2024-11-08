@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homeaway-queue-processor
+  labels:
+    app: homeaway-queue-processor
+    env: prod
+  namespace: ota
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: homeaway-queue-processor
+      labels:
+        app: homeaway-queue-processor
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: homeaway-queue-processor
+          image: steblynskyi-docker.jfrog.io/ota-homeaway-queue-processor:fd81cf251
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 100Mi
+            limits:
+              cpu: 250m
+              memory: 250Mi
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          - name: ConnectionStrings__innSyncDb
+            value: "Server=sql-inncenter.steblynskyi.com;User Id=here;password=here;Database=innSyncDb;MultipleActiveResultSets=True;Application Name=steblynskyi.Ota.HomeAway.QueueProcessor;TrustServerCertificate=Yes;"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: homeaway-queue-processor

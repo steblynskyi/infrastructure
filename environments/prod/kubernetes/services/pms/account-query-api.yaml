@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: account-query-api
+  labels:
+    app: account-query-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 5
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: account-query-api
+      labels:
+        app: account-query-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: account-query-api
+          image: steblynskyi-docker.jfrog.io/pms-account-query-api:03b4631
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 15m
+              memory: 128Mi
+            limits:
+              cpu: 150m
+              memory: 700Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: INN_MSSQL_SERVER
+            value: sql-inncenter.steblynskyi.com
+          - name: INN_MSSQL_DATABASE
+            value: here
+          - name: INN_MSSQL_USER
+            value: here
+          - name: INN_MSSQL_PASSWORD
+            value: here
+          - name: INN_LOG_FLUENT_HOST
+            value: utils-fluentd-logging.steblynskyi.com
+          - name: INN_LOG_LEVEL
+            value: DEBUG
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: account-query-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: account-query-api
+  namespace: pms
+  labels:
+    Domain: pms-account-query-api.steblynskyi.com
+spec:
+  selector:
+    app: account-query-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: account-query-api
+  namespace: pms
+spec:
+  maxReplicas: 7
+  minReplicas: 5
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: account-query-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 130m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 650Mi

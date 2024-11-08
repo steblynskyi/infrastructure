@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: localization-api
+  labels:
+    app: localization-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: localization-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: localization-api
+      labels:
+        env: prod
+        app: localization-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: localization-api
+        image: steblynskyi-docker.jfrog.io/pms-localization-api:e16f195
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 512Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: ConnectionStrings__InnCenterDb
+          value: Application Name=pms.localization.api;data source=sql-inncenter.steblynskyi.com;User ID=here;Password=here;Initial Catalog=here;pooling=true;connection lifetime=120;max pool size=3000
+        - name: ConnectionStrings__ReservationDb
+          value: "Server=reservation-db.steblynskyi.com;User Id=here;Password=here;Database=reservation;Application Name=pms.localization.api;"
+        - name: ConnectionStrings__GuestProfileDb
+          value: "Server=reservation-db.steblynskyi.com; User Id=here;Password=here;Database=guestprofile;Application Name=pms-localization-api;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: localization-api
+  namespace: pms
+  labels:
+    Domain: pms-localization-api.steblynskyi.com
+spec:
+  selector:
+    app: localization-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: localization-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: localization-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 500Mi

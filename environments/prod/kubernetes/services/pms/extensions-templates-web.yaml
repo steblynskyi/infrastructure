@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-templates-web
+  labels:
+    app: extensions-templates-web
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: extensions-templates-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-templates-web
+      labels:
+        env: prod
+        app: extensions-templates-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-templates-web
+        image: steblynskyi-docker.jfrog.io/pms-extensions-templates-web:dc9dd96
+        imagePullPolicy: IfNotPresent
+        args:
+        - -base-path=/setup/templates
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_PMS_INNCENTER_API_URL
+          value: "https://pms-inncenter-api.steblynskyi.com/api/v1"
+        - name: APP_EXTENSIONS_TEMPLATE_API
+          value: "https://pms-extensions-templates-api.steblynskyi.com/api"
+        - name: APP_EXTENSIONS_EMAIL_RULES_API
+          value: "https://pms-extensions-email-rules-api.steblynskyi.com/api"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: extensions-templates-web
+  namespace: pms
+spec:
+  selector:
+    app: extensions-templates-web
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: extensions-templates-web
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: extensions-templates-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 120m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

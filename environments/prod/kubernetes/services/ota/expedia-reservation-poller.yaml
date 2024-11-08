@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: expedia-reservation-poller
+  labels:
+    app: expedia-reservation-poller
+    env: prod
+  namespace: ota
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: expedia-reservation-poller
+      labels:
+        app: expedia-reservation-poller
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: expedia-reservation-poller
+          image: steblynskyi-docker.jfrog.io/ota-expedia-reservation-poller:fd81cf251
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 100Mi
+            limits:
+              cpu: 250m
+              memory: 250Mi
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: Endpoints__CoreOtaApi
+            value: https://ota-core-api.steblynskyi.com
+          - name: Endpoints__PublicOtaApi
+            value: https://ota-public-api.steblynskyi.com
+          - name: Expedia__BookingConfirmationApi
+            value: https://services.expediapartnercentral.com/eqc/bc
+          - name: Expedia__BookingRetrievalApi
+            value: https://services.expediapartnercentral.com/eqc/br
+          - name: Expedia__PollIntervalMilliseconds
+            value: "5000"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: expedia-reservation-poller

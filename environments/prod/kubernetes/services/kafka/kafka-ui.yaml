@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-ui
+  labels:
+    app: kafka-ui
+    env: prod
+  namespace: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-ui
+      env: prod
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: kafka-ui
+      labels:
+        env: prod
+        app: kafka-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: kafka-ui
+        image: tchiotludo/akhq
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 512Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+          - name: AKHQ_CONFIGURATION
+            value: |
+              micronaut:
+                security:
+                  enabled: true
+              akhq:
+                connections:
+                  kafka-server:
+                    properties:
+                      bootstrap.servers: "kafka:9092"
+                    connect:
+                      - name: "connect"
+                        url: "http://debezium-connect:80"
+                  kraft-server:
+                    properties:
+                      bootstrap.servers: "kraft:9092"
+                    connect:
+                      - name: "connect"
+                        url: "http://connect:80"
+                security:
+                  default-group: reader
+                  basic-auth:
+                    - username: admin
+                      password: "1"
+                      groups:
+                      - admin
+                    - username: steblynskyi
+                      password: "2"
+                      groups:
+                      - reader
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: kafka-ui
+  namespace: kafka
+  labels:
+    Domain: kafka-ui.steblynskyi.com
+spec:
+  selector:
+    app: kafka-ui
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: kafka-ui
+  namespace: kafka
+spec:
+  maxReplicas: 2
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: kafka-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 450Mi

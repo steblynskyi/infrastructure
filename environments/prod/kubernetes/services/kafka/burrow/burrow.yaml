@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: burrow
+  namespace: kafka
+  labels:
+    app: burrow
+    env: prod
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: burrow
+      env: prod
+  template:
+    metadata:
+      name: burrow
+      labels:
+        app: burrow
+        env: prod
+      annotations:
+        steblynskyi.io/scrape: "true"
+        kafka.io/metric_path: "/metrics"
+        kafka.io/scrape_port: '9464'
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: burrow
+          image: steblynskyi-docker.jfrog.io/kafka-burrow-metrics:v1
+          imagePullPolicy: IfNotPresent
+          command: ["/app/burrow"]
+          args: ["--config-dir", "/etc/burrow"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 150m
+              memory: 256Mi
+          ports:
+            - containerPort: 9464
+              name: metrics
+          volumeMounts:
+          - name: burrow
+            mountPath: "/etc/burrow/"
+            readOnly: true
+      volumes:
+        - name: burrow
+          configMap:
+            name: burrow

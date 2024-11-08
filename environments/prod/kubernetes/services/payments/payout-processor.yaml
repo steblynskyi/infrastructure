@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payout-processor
+  labels:
+    app: payout-processor
+    env: prod
+  namespace: payments
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payout-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: payout-processor
+      labels:
+        env: prod
+        app: payout-processor
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: payout-processor
+        image: steblynskyi-docker.jfrog.io/payments-payout-processor:58bb7d7f
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: INNCENTER_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__steblynskyiPaymentsDb
+          value: "Application Name=payments-payout-processor;Server=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_DB_USERNAME);Password=$(INNCENTER_DB_PASSWORD);Database=steblynskyiPayments;MultipleActiveResultSets=True;TrustServerCertificate=Yes"

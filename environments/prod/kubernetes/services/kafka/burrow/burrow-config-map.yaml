@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: burrow
+  namespace: kafka
+  labels:
+    app: burrow
+    env: prod
+data:
+  burrow.toml: |-
+    [zookeeper]
+    servers=[ "zookeeper:2181" ]
+    timeout=6
+    root-path="/burrow"
+
+    [client-profile.profile]
+    kafka-version="3.2.0"
+    client-id="docker-client"
+
+    [cluster.local]
+    client-profile="profile"
+    class-name="kafka"
+    servers=[ "kafka:9092" ]
+    topic-refresh=60
+    offset-refresh=30
+    groups-reaper-refresh=30
+
+    [httpserver.default]
+    address=":9464"
+
+    [consumer.local]
+    class-name="kafka"
+    cluster="local"
+    servers=[ "kafka:9092" ]
+    client-profile="profile"
+
+    [consumer.local_zk]
+    class-name="kafka_zk"
+    cluster="local"
+    servers=[ "zookeeper:2181" ]
+    zookeeper-path="/burrow"
+    zookeeper-timeout=30

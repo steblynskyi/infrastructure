@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-openid-api
+  labels:
+    app: auth-openid-api
+    env: prod
+  namespace: be
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: auth-openid-api
+      labels:
+        app: auth-openid-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: auth-openid-api
+          image: steblynskyi-docker.jfrog.io/steblynskyi.be.api.auth:a8ca20d
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 15m
+              memory: 50Mi
+            limits:
+              cpu: 250m
+              memory: 250Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: AUTH
+            value: OpenIdConnect
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: auth-openid-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: auth-openid-api
+  namespace: be
+  labels:
+    Domain: be-auth-openid-api.steblynskyi.com
+spec:
+  selector:
+    app: auth-openid-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: auth-openid-api
+  namespace: be
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: auth-openid-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

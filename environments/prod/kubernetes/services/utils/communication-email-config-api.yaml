@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: communication-email-config-api
+  labels:
+    app: communication-email-config-api
+    env: prod
+  namespace: utils
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: communication-email-config-api
+      labels:
+        app: communication-email-config-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: communication-email-config-api
+          image: steblynskyi-docker.jfrog.io/util-email-configapi:c4c319
+          imagePullPolicy: Always
+#          Uncomment this section if app has health check endpoint
+#          livenessProbe:
+#            failureThreshold: 3
+#            httpGet:
+#              port: http
+#              scheme: HTTP
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            successThreshold: 1
+#            timeoutSeconds: 5
+          resources:
+#            limits:
+#              cpu: 250m
+#              memory: 250Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: AppSettings__InnCenterDbConnectionString
+            value: Server=sql-inncenter.steblynskyi.com;Database=here;User Id=here; password=here;Application Name=utils-communication-email-config-api;
+          - name: Logging__FluentD__Environment
+            value: prod
+          - name: Logging__FluentD__Host
+            value: utils-fluentd-logging.steblynskyi.com
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: communication-email-config-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: communication-email-config-api
+  namespace: utils
+  labels:
+    Domain: utils-communication-email-config-api.steblynskyi.com
+spec:
+  selector:
+    app: communication-email-config-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: communication-email-config-api
+  namespace: utils
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: communication-email-config-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

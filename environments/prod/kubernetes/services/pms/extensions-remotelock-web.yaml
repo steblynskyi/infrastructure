@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-remotelock-web
+  labels:
+    app: extensions-remotelock-web
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: extensions-remotelock-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-remotelock-web
+      labels:
+        env: prod
+        app: extensions-remotelock-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-remotelock-web
+        image: steblynskyi-docker.jfrog.io/pms-extensions-remotelock-web:eca13f6
+        imagePullPolicy: IfNotPresent
+        args:
+        - -base-path=/setup/remote-lock/
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_JWT_AUTH_BASE_URL
+          value: https://be-auth-jwt-api.steblynskyi.com/api/v1
+        - name: APP_PMS_INNCENTER_API_URL
+          value: https://pms-inncenter-api.steblynskyi.com/api/v1
+        - name: APP_REMOTE_LOCK_API_URL
+          value: https://pms-extensions-remotelock-api.steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: extensions-remotelock-web
+  namespace: pms
+spec:
+  selector:
+    app: extensions-remotelock-web
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: extensions-remotelock-web
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: extensions-remotelock-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

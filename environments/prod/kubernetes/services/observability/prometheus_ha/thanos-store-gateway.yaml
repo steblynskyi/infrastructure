@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: thanos-store-gateway
+  namespace: observability
+  labels:
+    app: thanos-store-gateway
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: thanos-store-gateway
+  serviceName: prometheus-gateway
+  template:
+    metadata:
+      labels:
+        app: thanos-store-gateway
+        thanos-store-api: "true"
+    spec:
+      containers:
+        - name: thanos
+          image: quay.io/thanos/thanos:v0.30.2
+          args:
+          - "store"
+          - "--log.level=debug"
+          - "--data-dir=/data"
+          - |
+              --objstore.config=type: S3
+              config:
+                bucket: "steblynskyi-prod-prometheus-thanos-storage"
+                endpoint: "s3.us-east-1.amazonaws.com"
+                access_key: "here"
+                secret_key: "here"
+          - "--index-cache-size=1000MB"
+          - "--chunk-pool-size=1000MB"
+          - "--grpc-address=0.0.0.0:10901"
+          - "--http-address=0.0.0.0:10902"
+          - "--ignore-deletion-marks-delay=24h"
+          ports:
+          - name: http
+            containerPort: 10902
+          - name: grpc
+            containerPort: 10901
+          livenessProbe:
+            httpGet:
+              port: 10902
+              path: /-/healthy
+          readinessProbe:
+            httpGet:
+              port: 10902
+              path: /-/ready
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: thanos-store-gateway
+  name: thanos-store-gateway
+  namespace: observability
+spec:
+  clusterIP: None
+  ports:
+    - name: grpc
+      port: 10901
+      targetPort: 10901
+    - name: http
+      port: 10902
+      targetPort: 10902
+  selector:
+    app: thanos-store-gateway

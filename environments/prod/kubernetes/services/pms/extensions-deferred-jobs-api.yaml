@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-deferred-jobs-api
+  labels:
+    app: extensions-deferred-jobs-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: extensions-deferred-jobs-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-deferred-jobs-api
+      labels:
+        env: prod
+        app: extensions-deferred-jobs-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-deferred-jobs-api
+        image: steblynskyi-docker.jfrog.io/pms-extensions-deferred-jobs-api:f9c136a
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: QUARTZ_DEFERREDJOBS_DB_USERNAME
+          value: "here"
+        - name: QUARTZ_DEFERREDJOBS_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__Quartz
+          value: "Application Name=pms-extensions-deferred-jobs-api;Server=sql-quartz.steblynskyi.com;User ID=$(QUARTZ_DEFERREDJOBS_DB_USERNAME);Password=$(QUARTZ_DEFERREDJOBS_DB_PASSWORD);Initial Catalog=Quartz;Connect Timeout=30;Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=True;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: extensions-deferred-jobs-api
+  namespace: pms
+  labels:
+    Domain: pms-extensions-deferred-jobs-api.steblynskyi.com
+spec:
+  selector:
+    app: extensions-deferred-jobs-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: extensions-deferred-jobs-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: extensions-deferred-jobs-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 230m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 230Mi

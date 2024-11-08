@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: akia-api
+  labels:
+    app: akia-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: akia-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: akia-api
+      labels:
+        env: prod
+        app: akia-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: akia-api
+        image: steblynskyi-docker.jfrog.io/pms-akia-api:2049242
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: INNCENTER_AKIA_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_AKIA_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__Akia
+          value: "Application Name=pms-akia-api;Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_AKIA_DB_USERNAME);password=$(INNCENTER_AKIA_DB_PASSWORD);Database=Akia;MultipleActiveResultSets=True;TrustServerCertificate=Yes"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: akia-api
+  namespace: pms
+  labels:
+    Domain: pms-akia-api.steblynskyi.com
+spec:
+  selector:
+    app: akia-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: akia-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: akia-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 130m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookingdotcom-reservation-poller
+  labels:
+    app: bookingdotcom-reservation-poller
+    env: prod
+  namespace: ota
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookingdotcom-reservation-poller
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: bookingdotcom-reservation-poller
+      labels:
+        env: prod
+        app: bookingdotcom-reservation-poller
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: bookingdotcom-reservation-poller
+        image: steblynskyi-docker.jfrog.io/ota-bookingdotcom-reservation-poller:fd81cf251
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 250Mi
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production

@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservation-background-job
+  labels:
+    app: reservation-background-job
+    env: prod
+  namespace: pms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reservation-background-job
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: reservation-background-job
+      labels:
+        env: prod
+        app: reservation-background-job
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: reservation-background-job
+        image: steblynskyi-docker.jfrog.io/pms-reservation-background-job:3dc5f2401
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 384Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: AWS_ACCESS_KEY_ID
+          value: here
+        - name: AWS_SECRET_ACCESS_KEY
+          value: here
+        - name: AWS_DEFAULT_REGION
+          value: us-east-1
+        - name: INNCENTER_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_DB_PASSWORD
+          value: "here"
+        - name: "ConnectionStrings__InnCenter"
+          value: "Application Name=steblynskyi.Reservations.BackgroundJob;data source=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_DB_USERNAME);Password=$(INNCENTER_DB_PASSWORD);Initial Catalog=here; TrustServerCertificate=Yes;"

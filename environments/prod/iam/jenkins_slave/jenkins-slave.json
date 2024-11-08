@@ -1,0 +1,57 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+      {
+          "Effect": "Allow",
+          "Action": [
+              "s3:ListAllMyBuckets"
+          ],
+          "Resource": [
+              "*"
+          ]
+      },
+      {
+          "Effect": "Allow",
+          "Action": [
+              "s3:Get*",
+              "s3:List*",
+              "s3:Put*"
+          ],
+          "Resource": [
+              "arn:aws:s3:::steblynskyi-prod-codedeploy",
+              "arn:aws:s3:::steblynskyi-prod-codedeploy/*"
+          ]
+      },
+      {
+          "Sid": "Stmt1480975402000",
+          "Effect": "Allow",
+          "Action": [
+              "codedeploy:BatchGet*",
+              "codedeploy:Create*",
+              "codedeploy:Get*",
+              "codedeploy:List*",
+              "codedeploy:RegisterApplicationRevision",
+              "codedeploy:StopDeployment",
+              "codedeploy:UpdateApplication"
+          ],
+          "Resource": [
+              "*"
+          ]
+      },
+      {
+          "Effect": "Allow",
+          "Action": [
+              "lambda:Create*",
+              "lambda:Get*",
+              "lambda:InvokeAsync",
+              "lambda:InvokeFunction",
+              "lambda:List*",
+              "lambda:PublishVersion",
+              "lambda:Update*"
+          ],
+          "Resource": [
+              "*"
+          ]
+      }
+  ]
+}

@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: correction-tool-api
+  labels:
+    app: correction-tool-api
+    env: prod
+  namespace: payments
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: correction-tool-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: correction-tool-api
+      labels:
+        env: prod
+        app: correction-tool-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: correction-tool-api
+        image: steblynskyi-docker.jfrog.io/payments-correction-tool-api:8ccae46
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: INNCENTER_PAYMENTCORRECTION_TOOL_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_PAYMENTCORRECTION_TOOL_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__CorrectionTool
+          value: "Application Name=payments-correction-tool-api;Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_PAYMENTCORRECTION_TOOL_DB_USERNAME);password=$(INNCENTER_PAYMENTCORRECTION_TOOL_DB_PASSWORD);Database=PaymentsCorrectionTool;MultipleActiveResultSets=True;"
+        - name: INNCENTER_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_DB_PASSWORD
+          value: "here"
+        - name: DbSources__Target__ConnectionString
+          value: "Application Name=payments-correction-tool-api;Server=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_DB_USERNAME);Password=$(INNCENTER_DB_PASSWORD);Initial Catalog=here;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: correction-tool-api
+  namespace: payments
+  labels:
+    Domain: payments-correction-tool-api.steblynskyi.com
+spec:
+  selector:
+    app: correction-tool-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: correction-tool-api
+  namespace: payments
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: correction-tool-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -1,0 +1,129 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: housekeeping-room-api
+  labels:
+    app: housekeeping-room-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: housekeeping-room-api
+      labels:
+        app: housekeeping-room-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: housekeeping-room-api
+          image: steblynskyi-docker.jfrog.io/pms-housekeeping-room-api:96b2dfc
+          imagePullPolicy: Always
+#          Uncomment this section if app has health check endpoint
+#          livenessProbe:
+#            failureThreshold: 3
+#            httpGet:
+#              port: http
+#              scheme: HTTP
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            successThreshold: 1
+#            timeoutSeconds: 5
+          resources:
+#            limits:
+#              cpu: 250m
+#              memory: 250Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: INN_LOG_FLUENT_HOST
+            value: utils-fluentd-logging.steblynskyi.com
+          - name: INN_LOG_FLUENT_PORT
+            value: "24224"
+          - name: INN_LOG_LEVEL
+            value: WARNING
+          - name: INN_UPDATE_ROOM_STATUS
+            value: Pms-Housekeeping-Room-Condition-Updated-PROD
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_SECRET_ACCESS_KEY
+            value: here
+          - name: INN_AWS_REGION
+            value: us-east-1
+          - name: INN_AWS_APP_KEY
+            value: here
+          - name: INN_AWS_SECRET_KEY
+            value: here
+          - name: INN_SUITES_API
+            value: https://pms-task-property-api.steblynskyi.com/property/{}/suites
+          - name: INN_LOG_GROUP
+            value: gs/pms-housekeeping-room-api
+          - name: INN_INNCENTER_DB_NAME
+            value: here
+          - name: INN_INNCENTER_DB_HOST
+            value: sql-inncenter.steblynskyi.com
+          - name: INN_INNCENTER_DB_USER
+            value: here
+          - name: INN_INNCENTER_DB_PASSWORD
+            value: here
+          - name: INN_GUEST_SERVICES_DB_USER
+            value: guest_services_app
+          - name: INN_GUEST_SERVICES_DB_PASSWORD
+            value: here
+          - name: INN_GUEST_SERVICES_DB_HOST
+            value: reservation-db.steblynskyi.com
+          - name: INN_GUEST_SERVICES_DB_NAME
+            value: guestservices
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: housekeeping-room-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: housekeeping-room-api
+  namespace: pms
+  labels:
+    Domain: pms-housekeeping-room-api.steblynskyi.com
+spec:
+  selector:
+    app: housekeeping-room-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: housekeeping-room-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: housekeeping-room-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

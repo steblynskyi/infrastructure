@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lightspeed-api
+  labels:
+    app: lightspeed-api
+    env: prod
+  namespace: integrations
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: lightspeed-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: lightspeed-api
+      labels:
+        env: prod
+        app: lightspeed-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: lightspeed-api
+        image: steblynskyi-docker.jfrog.io/integrations-lightspeed-api:75977b52
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: ConnectionStrings__Lightspeed
+          value: "Application Name=steblynskyi.Integrations.Lightspeed.Api;Server=sql-inncenter.steblynskyi.com;User Id=here;password=here;Database=Lightspeed;MultipleActiveResultSets=True;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: lightspeed-api
+  namespace: integrations
+  labels:
+    Domain: integrations-lightspeed-api.steblynskyi.com
+spec:
+  selector:
+    app: lightspeed-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: lightspeed-api
+  namespace: integrations
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: lightspeed-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 240Mi

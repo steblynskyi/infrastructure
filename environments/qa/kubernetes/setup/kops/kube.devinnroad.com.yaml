@@ -189,7 +189,7 @@ spec:
     name: us-east-1b
     type: Private
     zone: us-east-1b
-  - cidr: 10.10.20.0/22
+  - cidr: 10.10.50.0/22
     name: utility-us-east-1a
     type: Utility
     zone: us-east-1a

@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: review-management
+  labels:
+    app: review-management
+    env: prod
+  namespace: ops
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: review-management
+      labels:
+        app: review-management
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: review-management
+          image: steblynskyi-docker.jfrog.io/ops-review-management:2265ec5
+          imagePullPolicy: Always
+#          Uncomment this section if app has health check endpoint
+#          livenessProbe:
+#            failureThreshold: 3
+#            httpGet:
+#              port: http
+#              scheme: HTTP
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            successThreshold: 1
+#            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: OIDC__ClientId
+            value: here
+          - name: OIDC__ClientSecret
+            value: here
+          - name: ConnectionStrings__ReviewsManagementConnection
+            value: "Server=internal-tools-db.steblynskyi.com;Database=ReviewManagement;User Id=here;Password=here;Application Name=ops-review-management;"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: review-management
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: review-management
+  namespace: ops
+  labels:
+    Domain: ops-review-management.steblynskyi.com
+spec:
+  selector:
+    app: review-management
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: review-management
+  namespace: ops
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: review-management
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

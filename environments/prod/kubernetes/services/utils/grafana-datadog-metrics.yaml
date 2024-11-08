@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-datadog-metrics
+  labels:
+    app: grafana-datadog-metrics
+    env: prod
+  namespace: utils
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana-datadog-metrics
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: grafana-datadog-metrics
+      labels:
+        env: prod
+        app: grafana-datadog-metrics
+      annotations:
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: grafana-datadog-metrics
+        image: steblynskyi-docker.jfrog.io/datadog-metrics:7249201
+        imagePullPolicy: IfNotPresent
+        resources:
+         requests:
+            cpu: 25m
+            memory: 32Mi
+         limits:
+            cpu: 250m
+            memory: 512Mi
+        ports:
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: MSSQL_USER
+          value: "here"
+        - name: MSSQL_PASSWORD
+          value: "here"
+        - name: MSSQL_SERVER
+          value: "sql-inncenter.steblynskyi.com"
+        - name: MSSQL_PORT
+          value: "1433"
+        - name: MSSQL_DATABASE
+          value: "here"
+        - name: SERVICE_PORT
+          value: "9464"

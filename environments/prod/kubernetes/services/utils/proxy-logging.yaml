@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: proxy-logging
+  labels:
+    app: proxy-logging
+    env: prod
+  namespace: utils
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: proxy-logging
+      labels:
+        app: proxy-logging
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: proxy-logging
+          image: steblynskyi-docker.jfrog.io/aws-elasticsearch-proxy:v1.0
+          imagePullPolicy: Always
+#          Uncomment this section if app has health check endpoint
+#          livenessProbe:
+#            failureThreshold: 3
+#            httpGet:
+#              port: http
+#              scheme: HTTP
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            successThreshold: 1
+#            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 250m
+              memory: 250Mi
+          ports:
+            - containerPort: 8081
+              name: http
+          env:
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_SECRET_ACCESS_KEY
+            value: here
+          - name: SERVER
+            value: search-logging-fluentd-prod-jopjfmksxw2fahidxrfdmnn7tm.us-east-1.es.amazonaws.com
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: proxy-logging
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: proxy-logging
+  namespace: utils
+  labels:
+    Domain: utils-proxy-logging.steblynskyi.com
+spec:
+  selector:
+    app: proxy-logging
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8081
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: proxy-logging
+  namespace: utils
+spec:
+  maxReplicas: 6
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: proxy-logging
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

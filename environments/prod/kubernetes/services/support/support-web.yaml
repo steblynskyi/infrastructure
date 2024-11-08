@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: support-web
+  labels:
+    app: support-web
+    env: prod
+  namespace: support
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: support-web
+      labels:
+        app: support-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: support-web
+          image: steblynskyi-docker.jfrog.io/support-web:c1318081
+          imagePullPolicy: IfNotPresent
+          args:
+          - -base-path=/
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+          - name: APP_OPEN_ID_API_URL
+            value: "https://be-auth-openid-api.steblynskyi.com/loginapi/OpenIdLogin"
+          - name: APP_AUTH_API_URL
+            value: "https://be-auth-openid-api.steblynskyi.com/api/v1"
+          - name: APP_SUPPORT_NODE_API
+            value: "https://support-api.steblynskyi.com"
+          - name: APP_OTA_PUBLIC_API_URL
+            value: "https://ota-api.steblynskyi.com/api/v1"
+          - name: APP_OTA_CORE_API_URL
+            value: "https://ota-core-api.steblynskyi.com/api/v1"
+          - name: APP_PROVISIONING_API_URL
+            value: "https://be-auth-openid-api.steblynskyi.com/api"
+          - name: APP_AUTH_API_BASE_URL
+            value: "https://be-auth-openid-api.steblynskyi.com"
+          - name: APP_BOOKING_ENGINE_API
+            value: "https://be-booking-engine-api.steblynskyi.com"
+          - name: APP_steblynskyi_BASE_DOMAIN
+            value: "steblynskyi.com"
+          - name: APP_AUTH_JWT_API_BASE_URL
+            value: "https://be-auth-jwt-api.steblynskyi.com"
+          - name: APP_WHISTLE_API
+            value: "https://pms-whistle-background-service-api.steblynskyi.com"
+          - name: APP_LIGHTSPEED_PUBLIC_API
+            value: "https://integrations-lightspeed-public-api.steblynskyi.com/api"
+          - name: APP_LIGHTSPEED_PRIVATE_API
+            value: "https://integrations-lightspeed-api.steblynskyi.com/api"
+          - name: APP_OTA_VB_POLLER_URL
+            value: "https://ota-verticalbooking-reservation-poller.steblynskyi.com"
+          - name: APP_GOOGLE_BOOKING_LINKS_API
+            value: "https://integrations-google-booking-links-public-api.steblynskyi.com/api"
+          - name: APP_REPORTS_PRESENTATION_API
+            value: "pms-reports-presentation-api.steblynskyi.com"
+          - name: APP_REMOTE_LOCK_PUBLIC_API
+            value: "https://pms-extensions-remotelock-api.steblynskyi.com"
+          - name: APP_MULTI_LANGUAGE_SUPPORT_API
+            value: "https://pms-multi-languages-support-api.steblynskyi.com"
+          - name: APP_EMAIL_PUBLIC_API
+            value: "https://integrations-email-api.steblynskyi.com"
+          - name: APP_EMAIL_PRIVATE_API
+            value: "https://integrations-email-internal-api.steblynskyi.com"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: support-web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: support-web
+  namespace: support
+  labels:
+    Domain: support-web.steblynskyi.com
+spec:
+  selector:
+    app: support-web
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: support-web
+  namespace: support
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: support-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 220m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -1,0 +1,150 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-command-api
+  labels:
+    app: task-command-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: task-command-api
+      labels:
+        app: task-command-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: task-command-api
+          image: steblynskyi-docker.jfrog.io/pms-task-command-api:7ac2a35
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: 250m
+              memory: 700Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: INN_AWS_APP_KEY
+            value: here
+          - name: INN_AWS_SECRET_KEY
+            value: here
+          - name: INN_AWS_REGION
+            value: us-east-1
+          - name: INN_DYNAMO_EVENTS_TABLE
+            value: task-event-source-prod
+          - name: INN_TASK_WORKFLOW_QUERY_API
+            value: https://pms-task-query-api.steblynskyi.com/property/{}/task/{}/workflow
+          - name: INN_TASK_QUERY_API
+            value: https://pms-task-query-api.steblynskyi.com
+          - name: INN_LOG_FLUENT_HOST
+            value: utils-fluentd-logging.steblynskyi.com
+          - name: INN_LOG_FLUENT_PORT
+            value: "24224"
+          - name: INN_LOG_LEVEL
+            value: INFO
+          - name: INN_TASK_PROPERTY_API_GET_PROPERTY_INFO
+            value: https://pms-task-property-api.steblynskyi.com/property/{}
+          - name: INN_RESERVATION_API_GET_PROPERTY_INFO
+            value: https://pms-reservation-query-api.steblynskyi.com/api/v1/property/{}/reservation/{}
+          - name: INN_ACCOUNT_API_URL
+            value: https://pms-account-query.steblynskyi.com/api/v1
+          - name: INN_PROPERTY_API_URL
+            value: https://pms-property-api.steblynskyi.com
+          - name: INN_RESERVATION_API_URL
+            value: https://pms-reservation-query-api.steblynskyi.com
+          - name: INN_GS_PROPERTY_API
+            value: https://pms-task-property-api.steblynskyi.com
+          - name: INN_INNCENTER_DB_SERVER
+            value: sql-inncenter.steblynskyi.com
+          - name: INN_INNCENTER_DB_PASSWORD
+            value: here
+          - name: INN_INNCENTER_DB_DATABASE
+            value: here
+          - name: INN_INNCENTER_DB_USER
+            value: here
+          - name: INN_LOG_GROUP
+            value: gs/pms-task-command-api
+          - name: INN_IDENTITY_AUTH_API
+            value: https://identity-auth-api.steblynskyi.com/auth
+          - name: INN_HOUSEKEEPING_ROOM_API
+            value: https://pms-housekeeping-room-api.steblynskyi.com
+          - name: INN_JWT_SECRET
+            value: '-----BEGIN RSA PRIVATE KEY-----\here==\n-----END RSA PRIVATE KEY-----'
+          - name: INN_JWT_ALG
+            value: RS256
+          - name: INN_JWT_KEY_VERSION
+            value: gs/gs_v1.pub
+          - name: INN_SUITES_API
+            value: https://pms-task-property-api.steblynskyi.com/property/{}/suites
+          - name: INN_TASK_CATEGORY_API
+            value: https://pms-task-category-api.steblynskyi.com
+          - name: INN_SQS_QUEUE_URL
+            value: https://sqs.us-east-1.amazonaws.com/123/Task-Command-AllEvents-PROD.fifo
+          - name: INN_VISIBILITY_TIMEOUT
+            value: "60"
+          - name: INN_GUEST_SERVICES_DB_USER
+            value: here
+          - name: INN_GUEST_SERVICES_DB_PASSWORD
+            value: here
+          - name: INN_GUEST_SERVICES_DB_HOST
+            value: reservation-db.steblynskyi.com
+          - name: INN_GUEST_SERVICES_DB_NAME
+            value: here
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: task-command-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: task-command-api
+  namespace: pms
+  labels:
+    Domain: pms-task-command-api.steblynskyi.com
+spec:
+  selector:
+    app: task-command-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: task-command-api
+  namespace: pms
+spec:
+  maxReplicas: 7
+  minReplicas: 4
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: task-command-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 200m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 600Mi

@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ui-events-api-subscriber
+  labels:
+    app: ui-events-api-subscriber
+    env: prod
+  namespace: pms
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: ui-events-api-subscriber
+      labels:
+        app: ui-events-api-subscriber
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: ui-events-api-subscriber
+          image: steblynskyi-docker.jfrog.io/pms-ui-events-subscriber:b7b2eda
+          imagePullPolicy: Always
+#          Uncomment this section if app has health check endpoint
+#          livenessProbe:
+#            failureThreshold: 3
+#            httpGet:
+#              port: http
+#              scheme: HTTP
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            successThreshold: 1
+#            timeoutSeconds: 5
+          resources:
+#            limits:
+#              cpu: 250m
+#              memory: 250Mi
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: ConnectionStrings__steblynskyiEventsDb
+            value: Server=sql-inncenter.steblynskyi.com;User Id=here;password=here;Database=here;MultipleActiveResultSets=True;Application Name=steblynskyi.Pms.UIInstrumentation.Subscriber;
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: ui-events-api-subscriber

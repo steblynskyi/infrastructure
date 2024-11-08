@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webhook-processor
+  labels:
+    app: webhook-processor
+    env: prod
+  namespace: payments
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: webhook-processor
+      labels:
+        app: webhook-processor
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: webhook-processor
+          image: steblynskyi-docker.jfrog.io/payments-webhook-processor:58bb7d7f
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: webhook-processor

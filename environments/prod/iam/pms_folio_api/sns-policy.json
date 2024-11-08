@@ -1,0 +1,43 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "SnsAccess",
+            "Effect": "Allow",
+            "Action": [
+                "sns:GetTopicAttributes",
+                "sns:CreateTopic",
+                "sns:Publish",
+                "sns:Subscribe"
+            ],
+            "Resource": [
+               "arn:aws:sns:us-east-1:123:MT-ReservationUpdatedEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationDeletedEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationCreatedEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationCheckedOutEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationCheckedInEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-GroupPickUpEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-GroupBlockUpdateEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-GroupBlockCreateEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-FolioUpdatedEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-FolioCreatedEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountCreatedEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountUpdatedEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountDistributionEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountStatementEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationNoShowEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-ReservationCanceledEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-AccountDeletedEvent-PROD.fifo",
+               "arn:aws:sns:us-east-1:123:MT-FolioInternalEvent-PROD.fifo"
+            ]
+        },
+        {
+            "Sid": "SnsListAccess",
+            "Effect": "Allow",
+            "Action": [
+                "sns:ListTopics"
+            ],
+            "Resource": "arn:aws:sns:us-east-1:123:*"
+        }
+    ]
+}

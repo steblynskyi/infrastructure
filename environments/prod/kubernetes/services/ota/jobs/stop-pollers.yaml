@@ -1,0 +1,45 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: stop-pollers-before-scale-down
+  namespace: ota
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: cron-user-ota
+          containers:
+            - name: stop-pollers-before-scale-down
+              image: bitnami/kubectl:1.19.11
+              imagePullPolicy: IfNotPresent
+              args:
+                - scale
+                - deployments/bookingdotcom-reservation-poller
+                - deployments/expedia-reservation-poller
+                - --replicas=0
+  schedule: "15 2 * * *"
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: stop-pollers-before-scale-up
+  namespace: ota
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: cron-user-ota
+          containers:
+            - name: stop-pollers-before-scale-up
+              image: bitnami/kubectl:1.19.11
+              imagePullPolicy: IfNotPresent
+              args:
+                - scale
+                - deployments/bookingdotcom-reservation-poller
+                - deployments/expedia-reservation-poller
+                - --replicas=0
+  schedule: "15 9 * * *"

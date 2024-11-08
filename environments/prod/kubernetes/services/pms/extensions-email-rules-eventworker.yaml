@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-email-rules-eventworker
+  labels:
+    app: extensions-email-rules-eventworker
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: extensions-email-rules-eventworker
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-email-rules-eventworker
+      labels:
+        env: prod
+        app: extensions-email-rules-eventworker
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-email-rules-eventworker
+        image: steblynskyi-docker.jfrog.io/pms-extensions-email-rules-eventworker:22c5bb6
+        imagePullPolicy: IfNotPresent 
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: INNCENTER_EMAILRULES_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_EMAILRULES_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__EmailRulesDb
+          value: "Application Name=pms-extensions-email-rules-eventworker;Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_EMAILRULES_DB_USERNAME);password=$(INNCENTER_EMAILRULES_DB_PASSWORD);Database=EmailRules;TrustServerCertificate=true"

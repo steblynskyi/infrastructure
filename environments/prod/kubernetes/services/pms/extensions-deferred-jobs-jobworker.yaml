@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-deferred-jobs-jobworker
+  labels:
+    app: extensions-deferred-jobs-jobworker
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: extensions-deferred-jobs-jobworker
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-deferred-jobs-jobworker
+      labels:
+        env: prod
+        app: extensions-deferred-jobs-jobworker
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-deferred-jobs-jobworker
+        image: steblynskyi-docker.jfrog.io/pms-extensions-deferred-jobs-jobworker:f9c136a
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: QUARTZ_DEFERREDJOBS_DB_USERNAME
+          value: "here"
+        - name: QUARTZ_DEFERREDJOBS_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__Quartz
+          value: "Application Name=pms-extensions-deferred-jobs-jobworker;Server=sql-quartz.steblynskyi.com;User ID=$(QUARTZ_DEFERREDJOBS_DB_USERNAME);Password=$(QUARTZ_DEFERREDJOBS_DB_PASSWORD);Initial Catalog=Quartz;Connect Timeout=30;Encrypt=False;TrustServerCertificate=True;MultipleActiveResultSets=True;"

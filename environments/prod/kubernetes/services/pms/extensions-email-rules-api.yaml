@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: extensions-email-rules-api
+  labels:
+    app: extensions-email-rules-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: extensions-email-rules-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: extensions-email-rules-api
+      labels:
+        env: prod
+        app: extensions-email-rules-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: extensions-email-rules-api
+        image: steblynskyi-docker.jfrog.io/pms-extensions-email-rules-api:22c5bb6
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: INNCENTER_EMAILRULES_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_EMAILRULES_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__EmailRulesDb
+          value: "Application Name=pms-extensions-email-rules-api;Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_EMAILRULES_DB_USERNAME);password=$(INNCENTER_EMAILRULES_DB_PASSWORD);Database=EmailRules;TrustServerCertificate=true"
+        - name: INNCENTER_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__InnCenterDb
+          value: "Application Name=pms-extensions-email-rules-api;Server=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_DB_USERNAME);Password=$(INNCENTER_DB_PASSWORD);Database=here;TrustServerCertificate=true"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: extensions-email-rules-api
+  namespace: pms
+spec:
+  selector:
+    app: extensions-email-rules-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: extensions-email-rules-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: extensions-email-rules-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 120m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

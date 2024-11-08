@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: support-api
+  labels:
+    app: support-api
+    env: prod
+  namespace: support
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: support-api
+      labels:
+        app: support-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: support-api
+          image: steblynskyi-docker.jfrog.io/support-api:8c8ec7a6
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: OPEN_ID_API_URL
+            value: https://be-auth-openid-api.steblynskyi.com/loginapi/OpenIdLogin
+          - name: AUTH_API_URL
+            value: https://be-auth-openid-api.steblynskyi.com/api/v1
+          - name: ALLOWED_DOMAINS
+            value: https://support-web.steblynskyi.com
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: support-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: support-api
+  namespace: support
+  labels:
+    Domain: support-api.steblynskyi.com
+spec:
+  selector:
+    app: support-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: support-api
+  namespace: support
+spec:
+  maxReplicas: 1
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: support-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

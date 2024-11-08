@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unit-owners-ui
+  labels:
+    app: unit-owners-ui
+    env: prod
+  namespace: b2b
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: unit-owners-ui
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: unit-owners-ui
+      labels:
+        env: prod
+        app: unit-owners-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: unit-owners-ui
+        image: steblynskyi-docker.jfrog.io/b2b-unit-owners-ui:92ce5eb
+        imagePullPolicy: IfNotPresent
+        args:
+        - -base-path=/unit-owners/portal
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_IDENTITY_API_BASE_URL
+          value: "https://b2b-identity-api.steblynskyi.com"
+        - name: APP_PORTAL_API_BASE_URL
+          value: "https://b2b-unit-owners-api.steblynskyi.com"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: unit-owners-ui
+  namespace: b2b
+spec:
+  selector:
+    app: unit-owners-ui
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: unit-owners-ui
+  namespace: b2b
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: unit-owners-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 120m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

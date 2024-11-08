@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: innsights-email-api
+  labels:
+    app: innsights-email-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: innsights-email-api
+      labels:
+        app: innsights-email-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: innsights-email-api
+          image: steblynskyi-docker.jfrog.io/pms-innsights-email-api:1100e04ef
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3001
+              name: http
+          env:
+          - name: CHART_SERVER
+            value: http://utils-highcharts-export.steblynskyi.com
+          - name: REACT_APP_CURRENT_DOMAIN
+            value: https://app.steblynskyi.com
+          - name: NODE_ENV
+            value: PROD
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_SECRET_ACCESS_KEY
+            value: here
+          - name: AWS_BUCKET
+            value: steblynskyi-prod-pms-innsights-email-api
+          - name: INNCENTER_API_BASE_URL
+            value: https://app.steblynskyi.com
+          - name: PMS_INNCENTER_API
+            value: https://pms-inncenter-api.steblynskyi.com/api/v1
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: innsights-email-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: innsights-email-api
+  namespace: pms
+  labels:
+    Domain: pms-innsights-email-api.steblynskyi.com
+spec:
+  selector:
+    app: innsights-email-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 3001
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: innsights-email-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: innsights-email-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pagerduty-api
+  labels:
+    app: pagerduty-api
+    env: prod
+  namespace: integrations
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pagerduty-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: pagerduty-api
+      labels:
+        env: prod
+        app: pagerduty-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: pagerduty-api
+        image: steblynskyi-docker.jfrog.io/integrations-pagerduty-api:f56796e
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: AWS_ACCESS_KEY_ID
+          value: here
+        - name: AWS_SECRET_ACCESS_KEY
+          value: here
+        - name: AWS_REGION
+          value: us-east-1
+        - name: InnCenterInternalApiSettings__BaseUrl
+          value: "https://pms-inncenter-internal-api.steblynskyi.com"
+        - name: PagerDutyApiSettings__WebhookSignatureKey
+          value: "here"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: pagerduty-api
+  namespace: integrations
+  labels:
+    Domain: integrations-pagerduty-api.steblynskyi.com
+spec:
+  selector:
+    app: pagerduty-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pagerduty-api
+  namespace: integrations
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pagerduty-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

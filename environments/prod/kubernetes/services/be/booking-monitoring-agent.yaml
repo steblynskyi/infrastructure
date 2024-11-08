@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-monitoring-agent
+  labels:
+    app: booking-monitoring-agent
+    env: prod
+  namespace: be
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: booking-monitoring-agent
+      labels:
+        app: booking-monitoring-agent
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: booking-monitoring-agent
+          image: steblynskyi-docker.jfrog.io/be-booking-monitoring-agent:cc8fd63
+          imagePullPolicy: Always
+#          Uncomment this section if app has health check endpoint
+#          livenessProbe:
+#            failureThreshold: 3
+#            httpGet:
+#              port: http
+#              scheme: HTTP
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            successThreshold: 1
+#            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 450m
+              memory: 1Gi
+          env:
+          - name: URLS
+            value: https://oceanvillas.client.steblynskyi.com https://sd2.client.steblynskyi.com
+          - name: API_URL
+            value: https://pms-ui-events-api.steblynskyi.com
+          - name: CORE_API_URL
+            value: https://be-core-api.steblynskyi.com
+          - name: SCHEDULE
+            value: "*/1 * * * *"
+          - name: NUMBER_OF_URLS_TO_PROCESS
+            value: "1"
+          - name: NUMBER_OF_SAMPLES
+            value: "1"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: booking-monitoring-agent

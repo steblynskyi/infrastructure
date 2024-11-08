@@ -1,0 +1,135 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unit-owners-api
+  labels:
+    app: unit-owners-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: unit-owners-api
+      labels:
+        app: unit-owners-api
+        env: prod
+      annotations:
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: unit-owners-api
+          image: steblynskyi-docker.jfrog.io/pms-unit-owners-api:1ca368e8
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /unit-owners/health/live
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /unit-owners/health/status
+              port: http
+              scheme: HTTP
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources:
+           requests:
+              cpu: 50m
+              memory: 64Mi
+           limits:
+              cpu: 800m
+              memory: 1Gi
+          ports:
+            - containerPort: 80
+              name: http
+            - containerPort: 9464
+              name: metrics
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: ConnectionStrings__UnitOwners
+            value: Host=reservation-db.steblynskyi.com;Database=here;Username=here;Password=here;Pooling=true;MaxPoolSize=500;Connection Idle Lifetime=300;Timeout=300;Application Name=steblynskyi.UnitOwners.Api;
+          - name: RedisCache__ConnectionString
+            value: cache.steblynskyi.com
+          - name: ConnectionStrings__InnCenter
+            value: Server=sql-inncenter.steblynskyi.com;Database=here;User Id=here; password=here;connection lifetime=180;Connect Timeout=60;Application Name=steblynskyi.UnitOwners.Api;
+          - name: PrivateAuthentication__ApiKey
+            value: "here"
+          - name: AppSettings__IdentityApiUrl
+            value: "https://b2b-identity-api.steblynskyi.com"
+          - name: AppSettings__CorsOrigins__0
+            value: "https://app.steblynskyi.com"
+          - name: AppSettings__CorsOrigins__1
+            value: "https://b2b-identity-api.steblynskyi.com"
+          - name: AppSettings__CorsOrigins__2
+            value: "https://b2b-unit-owners-api.steblynskyi.com"
+          - name: AWS_ACCESS_KEY_ID
+            value: "here"
+          - name: AWS_SECRET_ACCESS_KEY
+            value: "here"
+          - name: AWS_DEFAULT_REGION
+            value: "us-east-1"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: unit-owners-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /unit-owners/health/live
+    alb.ingress.kubernetes.io/success-codes: 200-299
+  name: unit-owners-api
+  namespace: pms
+  labels:
+    Domain: pms-unit-owners-api.steblynskyi.com
+spec:
+  selector:
+    app: unit-owners-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: unit-owners-api
+  namespace: pms
+spec:
+  maxReplicas: 6
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: unit-owners-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 950Mi

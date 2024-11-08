@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quickbooks-web
+  labels:
+    app: quickbooks-web
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: quickbooks-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: quickbooks-web
+      labels:
+        app: quickbooks-web
+        env: prod
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: quickbooks-web
+        image: steblynskyi-docker.jfrog.io/pms-quickbooks-web:c00be59
+        imagePullPolicy: Always
+        args:
+          - -base-path=/nightaudit/quickbooks
+        resources:
+          requests:
+            cpu: 25m
+            memory: 100Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_QUICKBOOKS_API_URL
+          value: https://be-auth-jwt-api.steblynskyi.com/api/v1/quickbooks
+        - name: APP_AUTH_API_URL
+          value: https://be-auth-jwt-api.steblynskyi.com/api/v1
+        - name: APP_INNCENTER_API_BASE_URL
+          value: https://app.steblynskyi.com
+        - name: APP_PMS_INNCENTER_API
+          value: https://pms-inncenter-api.steblynskyi.com/api/v1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: quickbooks-web
+  namespace: pms
+  labels:
+    Domain: pms-quickbooks-web.steblynskyi.com
+spec:
+  selector:
+    app: quickbooks-web
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: quickbooks-web
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: quickbooks-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 200Mi

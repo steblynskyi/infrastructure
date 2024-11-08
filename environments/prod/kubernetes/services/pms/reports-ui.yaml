@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reports-ui
+  labels:
+    app: reports-ui
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: reports-ui
+      labels:
+        app: reports-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: reports-ui
+          image: steblynskyi-docker.jfrog.io/pms-reports-ui:6fedc84f
+          imagePullPolicy: IfNotPresent
+          args:
+            - -base-path=/reports
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 150m
+              memory: 256Mi
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+          - name: APP_INNCENTER_API_BASE_URL
+            value: "https://app.steblynskyi.com"
+          - name: APP_GOOGLE_ANALYTICS_ENABLED
+            value: "true"
+          - name: APP_GOOGLE_TAG_MANAGER_ENV_KEY
+            value: "here"
+          - name: APP_GOOGLE_TAG_MANAGER_KEY
+            value: "here"
+          - name: APP_PMS_INNCENTER_API
+            value: "https://pms-inncenter-api.steblynskyi.com/api/v1"
+
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: reports-ui
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: reports-ui
+  namespace: pms
+  labels:
+    Domain: pms-reports-ui.steblynskyi.com
+spec:
+  selector:
+    app: reports-ui
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reports-ui
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reports-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 120m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

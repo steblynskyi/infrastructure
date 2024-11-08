@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: innsights-api
+  labels:
+    app: innsights-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: innsights-api
+      labels:
+        app: innsights-api
+      annotations:
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: innsights-api
+          image: steblynskyi-docker.jfrog.io/pms-innsights-api:b52eac65
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 100m
+              memory: 300Mi
+            limits:
+              cpu: 400m
+              memory: 1500Mi
+          ports:
+            - containerPort: 5000
+              name: http
+            - containerPort: 9464
+              name: metrics
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: AWS_REGION
+            value: us-east-1
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_SECRET_ACCESS_KEY
+            value: here
+          - name: ConnectionStrings__RedisCache
+            value: cache.steblynskyi.com
+          - name: ConnectionStrings__Hangfire
+            value: Host=innsights-db.steblynskyi.com;Database=innSights;Username=here;Password=here;Pooling=true;MaxPoolSize=500;Connection Idle Lifetime=180;Timeout=180;CommandTimeout=180;Application Name=pms-innsights-api-hangfire;
+          - name: ConnectionStrings__InnCenter
+            value: Server=sql-inncenter.steblynskyi.com;Database=here;User Id=here; password=here;Application Name=pms-innsights-api;TrustServerCertificate=true;
+          - name: ConnectionStrings__InnSights
+            value: Host=innsights-db.steblynskyi.com;Database=innSights;Username=here;Password=here;Pooling=true;MaxPoolSize=500;Connection Idle Lifetime=180;Timeout=180;CommandTimeout=180;Application Name=pms-innsights-api;
+          - name: EmailSettings__ConnectionString
+            value: Host=innsights-db.steblynskyi.com;Database=innSights;Username=here;Password=here;Pooling=true;MaxPoolSize=500;Connection Idle Lifetime=180;Timeout=180;CommandTimeout=180;Application Name=pms-innsights-api;
+          - name: OverrideAppSettings__CoreApiUrl
+            value: https://be-core-api.steblynskyi.com
+          - name: InnSightsApiSettings__EmailJobCronExpression
+            value: "*/5 * * * *"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: innsights-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: innsights-api
+  namespace: pms
+  labels:
+    Domain: pms-innsights-api.steblynskyi.com
+spec:
+  selector:
+    app: innsights-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: innsights-api
+  namespace: pms
+spec:
+  maxReplicas: 3
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: innsights-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 950Mi

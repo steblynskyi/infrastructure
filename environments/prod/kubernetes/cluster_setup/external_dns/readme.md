@@ -1,0 +1,1 @@
+# The iam-policy-for-external-dns.json iam policy must be added to IAM role nodes.kube.steblynskyi.com, IAM Role created by KOPS

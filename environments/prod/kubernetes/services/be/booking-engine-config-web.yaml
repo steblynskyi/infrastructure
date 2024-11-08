@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-engine-config-web
+  labels:
+    app: booking-engine-config-web
+    env: prod
+  namespace: be
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: booking-engine-config-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: booking-engine-config-web
+      labels:
+        env: prod
+        app: booking-engine-config-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: booking-engine-config-web
+          image: steblynskyi-docker.jfrog.io/be-booking-engine-config-web:b4023c8
+          imagePullPolicy: Always
+          args:
+            - -base-path=/admin/config
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 356Mi
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_BOOKING_ENGINE_PUBLIC_API_URL
+              value: https://be-booking-engine-api.steblynskyi.com
+            - name: APP_BOOKING_ENGINE_PROTECTED_API_URL
+              value: https://be-booking-engine-protected-api.steblynskyi.com
+            - name: APP_IDENTITY_API_URL
+              value: https://identity-api.steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: booking-engine-config-web
+  namespace: be
+  labels:
+    Domain: be-booking-engine-config-web.steblynskyi.com
+spec:
+  selector:
+    app: booking-engine-config-web
+    env: prod
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: booking-engine-config-web
+  namespace: be
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: booking-engine-config-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 300m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

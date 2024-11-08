@@ -1,0 +1,43 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: restart-webhook-processor-after-down
+  namespace: payments
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: cron-user-payments
+          containers:
+            - name: restart-webhook-processor-after-down
+              image: bitnami/kubectl:1.19.11
+              imagePullPolicy: IfNotPresent
+              args:
+                - delete
+                - pod
+                - -l app=webhook-processor
+  schedule: "21 2 * * *"
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: restart-webhook-processor-after-up
+  namespace: payments
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: cron-user-payments
+          containers:
+            - name: restart-webhook-processor-after-up
+              image: bitnami/kubectl:1.19.11
+              imagePullPolicy: IfNotPresent
+              args:
+                - delete
+                - pod
+                - -l app=webhook-processor
+  schedule: "21 9 * * *"

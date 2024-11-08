@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: identity-web
+  labels:
+    app: identity-web
+    env: prod
+  namespace: identity
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: identity-web
+      labels:
+        app: identity-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: identity-web
+          image: steblynskyi-docker.jfrog.io/identity-web:b7f91e6
+          imagePullPolicy: IfNotPresent
+          args:
+          - -base-path=/identity
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+          - name: APP_INNCENTER_URL
+            value: https://app.steblynskyi.com
+          - name: APP_AUTHENTICATION_API_URL
+            value: "https://identity-extensions-authentication-api.steblynskyi.com/api"
+          - name: APP_PMS_INNCENTER_API_URL
+            value: "https://pms-inncenter-api.steblynskyi.com/"
+          - name: APP_JWT_AUTH_BASE_URL
+            value: "https://be-auth-jwt-api.steblynskyi.com/api/v1"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: identity-web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: identity-web
+  namespace: identity
+  labels:
+    Domain: identity-identity-web.steblynskyi.com
+spec:
+  selector:
+    app: identity-web
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: identity-web
+  namespace: identity
+spec:
+  maxReplicas: 6
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: identity-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 220m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 480Mi

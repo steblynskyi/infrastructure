@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: task-category-api
+  labels:
+    app: task-category-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: task-category-api
+      labels:
+        app: task-category-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: task-category-api
+          image: steblynskyi-docker.jfrog.io/pms-task-category-api:40f27f0
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 250m
+              memory: 450Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: INN_LOG_FLUENT_HOST
+            value: utils-fluentd-logging.steblynskyi.com
+          - name: INN_LOG_FLUENT_PORT
+            value: "24224"
+          - name: INN_LOG_LEVEL
+            value: DEBUG
+          - name: INN_TASK_CATEGORY_API
+            value: https://pms-task-category-api.steblynskyi.com/property/{}/category
+          - name: INN_AWS_APP_KEY
+            value: here
+          - name: INN_AWS_SECRET_KEY
+            value: here
+          - name: INN_AWS_REGION
+            value: us-east-1
+          - name: INN_LOG_GROUP
+            value: gs/pms-task-category-api
+          - name: INN_GUEST_SERVICES_DB_USER
+            value: here
+          - name: INN_GUEST_SERVICES_DB_PASSWORD
+            value: here
+          - name: INN_GUEST_SERVICES_DB_HOST
+            value: reservation-db.steblynskyi.com
+          - name: INN_GUEST_SERVICES_DB_NAME
+            value: here
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: task-category-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: task-category-api
+  namespace: pms
+  labels:
+    Domain: pms-task-category-api.steblynskyi.com
+spec:
+  selector:
+    app: task-category-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: task-category-api
+  namespace: pms
+spec:
+  maxReplicas: 6
+  minReplicas: 4
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: task-category-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 200m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 350Mi

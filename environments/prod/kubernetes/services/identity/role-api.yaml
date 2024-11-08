@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: role-api
+  labels:
+    app: role-api
+    env: prod
+  namespace: identity
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: role-api
+      labels:
+        app: role-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: role-api
+          image: steblynskyi-docker.jfrog.io/identity-role-api:12de441
+          imagePullPolicy: Always
+#          Uncomment this section if app has health check endpoint
+#          livenessProbe:
+#            failureThreshold: 3
+#            httpGet:
+#              port: http
+#              scheme: HTTP
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            successThreshold: 1
+#            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 64m
+              memory: 120Mi
+            limits:
+              cpu: 250m
+              memory: 512Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: INN_AWS_APP_KEY
+            value: here
+          - name: INN_AWS_SECRET_KEY
+            value: here
+          - name: INN_AWS_REGION
+            value: us-east-1
+          - name: INN_DYNAMO_ROLE_TABLE
+            value: role-api-prod
+          - name: INN_LOG_FLUENT_HOST
+            value: utils-fluentd-logging.steblynskyi.com
+          - name: INN_LOG_LEVEL
+            value: DEBUG
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: role-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: role-api
+  namespace: identity
+  labels:
+    Domain: identity-role-api.steblynskyi.com
+spec:
+  selector:
+    app: role-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: role-api
+  namespace: identity
+spec:
+  maxReplicas: 6
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: role-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reservations-ui
+  labels:
+    app: reservations-ui
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: reservations-ui
+      labels:
+        app: reservations-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: reservations-ui
+          image: steblynskyi-docker.jfrog.io/pms-reservations-ui:6b799e8a7
+          imagePullPolicy: IfNotPresent
+          args:
+            - -base-path=/reservations
+            - -set-custom-header=content-security-policy-report-only:default-src 'self'
+            - -set-custom-header=content-security-policy-report-only:script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://js.stripe.com *.google-analytics.com *.steblynskyi.com https://dev.virtualearth.net *.steblynskyi.com;
+            - -set-custom-header=content-security-policy-report-only:style-src 'self' 'unsafe-inline' https://fonts.googleapis.com *.steblynskyi.com *.steblynskyi.com;
+            - -set-custom-header=content-security-policy-report-only:font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com data:;
+            - -set-custom-header=content-security-policy-report-only:connect-src *
+            - -set-custom-header=content-security-policy-report-only:img-src * data:; report-uri https://app.steblynskyi.com/reservations/api/csp/log-csp-reports; frame-ancestors 'self'
+            - -set-custom-header=content-security-policy-report-only:frame-src 'self'; manifest-src 'none'; media-src 'none'; object-src 'none'; worker-src 'none'
+            - -set-custom-header=content-security-policy-report-only:base-uri https://app.steblynskyi.com
+          resources:
+            requests:
+              cpu: 50m
+              memory: 100Mi
+            limits:
+              cpu: 150m
+              memory: 250Mi
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+          - name: APP_INNCENTER_BASE_URL
+            value: "https://app.steblynskyi.com"
+          - name: APP_RESERVATION_DASHBOARD_UI_URL
+            value: "https://pms-reservations-dashboard-ui.steblynskyi.com"
+          - name: APP_PMS_INNCENTER_API
+            value: "https://pms-inncenter-api.steblynskyi.com/api/v1"
+          - name: APP_EMAILS_INTEGRATION_UI_URL
+            value: "https://integrations-email-web.steblynskyi.com"
+
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: reservations-ui
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: reservations-ui
+  namespace: pms
+  labels:
+    Domain: pms-reservations-ui.steblynskyi.com
+spec:
+  selector:
+    app: reservations-ui
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reservations-ui
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reservations-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 120m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

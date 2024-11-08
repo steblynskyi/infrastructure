@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: innsights-web-api
+  labels:
+    app: innsights-web-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: innsights-web-api
+      labels:
+        app: innsights-web-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: innsights-web-api
+          image: steblynskyi-docker.jfrog.io/pms-innsights-web-api:b52eac65
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 6000
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: ConnectionStrings__RedisCache
+            value: cache.steblynskyi.com
+          - name: ConnectionStrings__InnCenter
+            value: Server=sql-inncenter.steblynskyi.com;Database=here;User Id=here; password=here;Application Name=pms-innsights-api;Application Name=pms-innsights-web-api;TrustServerCertificate=true;
+          - name: ConnectionStrings__InnSights
+            value: Host=innsights-db.steblynskyi.com;Database=innSights;Username=here;Password=here;Pooling=true;MaxPoolSize=500;Connection Idle Lifetime=180;Timeout=180;CommandTimeout=180;Application Name=pms-innsights-web-api;
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: innsights-web-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /innsights/api/status
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: innsights-web-api
+  namespace: pms
+  labels:
+    Domain: pms-innsights-web-api.steblynskyi.com
+spec:
+  selector:
+    app: innsights-web-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 6000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: innsights-web-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: innsights-web-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

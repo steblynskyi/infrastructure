@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guest-web
+  labels:
+    app: guest-web
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: guest-web
+      labels:
+        app: guest-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: guest-web
+          image: steblynskyi-docker.jfrog.io/pms-guest-web:7b1537f
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+          - name: NODE_ENV
+            value: prod
+          - name: TARGETDIR
+            value: GuestServices
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: guest-web
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: guest-web
+  namespace: pms
+  labels:
+    Domain: pms-guest-web.steblynskyi.com
+spec:
+  selector:
+    app: guest-web
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: guest-web
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: guest-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

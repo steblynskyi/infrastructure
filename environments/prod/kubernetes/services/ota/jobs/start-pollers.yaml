@@ -1,0 +1,45 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: start-pollers-after-scale-down
+  namespace: ota
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: cron-user-ota
+          containers:
+            - name: start-pollers-after-scale-down
+              image: bitnami/kubectl:1.19.11
+              imagePullPolicy: IfNotPresent
+              args:
+                - scale
+                - deployments/bookingdotcom-reservation-poller
+                - deployments/expedia-reservation-poller
+                - --replicas=1
+  schedule: "20 2 * * *"
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: start-pollers-after-scale-up
+  namespace: ota
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: cron-user-ota
+          containers:
+            - name: start-pollers-after-scale-up
+              image: bitnami/kubectl:1.19.11
+              imagePullPolicy: IfNotPresent
+              args:
+                - scale
+                - deployments/bookingdotcom-reservation-poller
+                - deployments/expedia-reservation-poller
+                - --replicas=1
+  schedule: "20 9 * * *"

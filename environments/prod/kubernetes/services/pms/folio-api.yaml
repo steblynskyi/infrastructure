@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: folio-api
+  labels:
+    app: folio-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 6
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: folio-api
+      labels:
+        app: folio-api
+      annotations:
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: folio-api
+          image: steblynskyi-docker.jfrog.io/pms-folio-api:3443d876c
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 220Mi
+            limits:
+              cpu: 350m
+              memory: 750Mi
+          ports:
+            - containerPort: 5000
+              name: http
+            - containerPort: 9464
+              name: metrics
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_SECRET_ACCESS_KEY
+            value: here
+          - name: AWS_REGION
+            value: us-east-1
+          - name: INNCENTER_DB_USERNAME
+            value: "here"
+          - name: INNCENTER_DB_PASSWORD
+            value: "here"
+          - name: RESERVATION_FOLIO_DB_USERNAME
+            value: "here"
+          - name: RESERVATION_FOLIO_DB_PASSWORD
+            value: "here"
+          - name: RESERVATION_HISTORY_DB_USERNAME
+            value: "here"
+          - name: RESERVATION_HISTORY_DB_PASSWORD
+            value: "here"
+          - name: ConnectionStrings__InnCenter
+            value: "Application Name=steblynskyi.Folio.Api;data source=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_DB_USERNAME);Password=$(INNCENTER_DB_PASSWORD);Initial Catalog=here;TrustServerCertificate=Yes;"
+          - name: ConnectionStrings__Folio
+            value: "Application Name=steblynskyi.Folio.Api;Server=reservation-db.steblynskyi.com;User ID=$(RESERVATION_FOLIO_DB_USERNAME);Password=$(RESERVATION_FOLIO_DB_PASSWORD);Database=folio;"
+          - name: ConnectionStrings__Hangfire
+            value: "Application Name=steblynskyi.Folio.Api.Hangfire;Server=reservation-db.steblynskyi.com;User ID=$(RESERVATION_FOLIO_DB_USERNAME);Password=$(RESERVATION_FOLIO_DB_PASSWORD);Database=folio;"
+          - name: ConnectionStrings__History
+            value: "Application Name=steblynskyi.Folio.Api.History;Server=reservation-db.steblynskyi.com;User Id=$(RESERVATION_HISTORY_DB_USERNAME);Password=$(RESERVATION_HISTORY_DB_PASSWORD);Database=pms_history;"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: folio-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /folio/api/status
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: folio-api
+  namespace: pms
+  labels:
+    Domain: pms-folio-api.steblynskyi.com
+spec:
+  selector:
+    app: folio-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: folio-api
+  namespace: pms
+spec:
+  maxReplicas: 9
+  minReplicas: 6
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: folio-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 300m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 700Mi

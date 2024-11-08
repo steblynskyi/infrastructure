@@ -1,0 +1,144 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rate-engine-api
+  labels:
+    app: rate-engine-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: rate-engine-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: rate-engine-api
+      labels:
+        env: prod
+        app: rate-engine-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+        steblynskyi.io/scrape: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: rate-engine-api
+        image: steblynskyi-docker.jfrog.io/pms-rate-engine-api:83dbb9c5f
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 150m
+            memory: 120Mi
+          limits:
+            cpu: 350m
+            memory: 600Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 81
+          name: http2
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: AWS_ACCESS_KEY_ID
+          value: here
+        - name: AWS_SECRET_ACCESS_KEY
+          value: here
+        - name: AWS_REGION
+          value: us-east-1
+        - name: INNCENTER_RATES_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_RATES_DB_PASSWORD
+          value: "here"
+        - name: INNSIGHTS_DB_USERNAME
+          value: "here"
+        - name: INNSIGHTS_DB_PASSWORD
+          value: "here"
+        - name: RESERVATION_RATEENGINE_DB_USERNAME
+          value: "here"
+        - name: RESERVATION_RATEENGINE_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__History
+          value: "Application Name=pms-rate-engine-api;Server=reservation-db.steblynskyi.com;User Id=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD);Database=rateengine;"
+        - name: ConnectionStrings__InnSights
+          value: "Application Name=pms-rate-engine-api;Host=innsights-db.steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD);"
+        - name: ConnectionStrings__Inventory
+          value: "Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_RATES_DB_USERNAME);Password=$(INNCENTER_RATES_DB_PASSWORD);Initial Catalog=here;pooling=true;connection lifetime=180;Connect Timeout=60;max pool size=3000; Application Name=pms-rate-engine-api; TrustServerCertificate=true;"
+        - name: ConnectionStrings__RateEngine
+          value: "Application Name=pms-rate-engine-api;User ID=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD);Server=reservation-db.steblynskyi.com;Database=rateengine;Maximum Pool Size=300;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: rate-engine-api
+  namespace: pms
+  labels:
+    Domain: pms-rate-engine-api.steblynskyi.com
+spec:
+  selector:
+    app: rate-engine-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /grpc.health.v1.Health/Check
+    alb.ingress.kubernetes.io/success-codes: 0-99
+    alb.ingress.kubernetes.io/healthy-threshold-count: "2"
+    alb.ingress.kubernetes.io/unhealthy-threshold-count: "3"
+  name: rate-engine-grpc-api
+  namespace: pms
+  labels:
+    Domain: pms-rate-engine-grpc-api.steblynskyi.com
+spec:
+  selector:
+    app: rate-engine-api
+    env: prod
+  ports:
+  - port: 81
+    name: http2
+    targetPort: 81
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rate-engine-api
+  namespace: pms
+spec:
+  maxReplicas: 7
+  minReplicas: 5
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rate-engine-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 320m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 550Mi

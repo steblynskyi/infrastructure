@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: folio-integrations-processor
+  labels:
+    app: folio-integrations-processor
+    env: prod
+  namespace: pms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: folio-integrations-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: folio-integrations-processor
+      labels:
+        env: prod
+        app: folio-integrations-processor
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: folio-integrations-processor
+        image: steblynskyi-docker.jfrog.io/pms-folio-integrations-processor:d651dfdc5
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 384Mi
+        ports:
+        - containerPort: 5000
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: AWS_ACCESS_KEY_ID
+          value: here
+        - name: AWS_SECRET_ACCESS_KEY
+          value: here
+        - name: AWS_REGION
+          value: us-east-1
+        - name: INNCENTER_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_DB_PASSWORD
+          value: "here"
+        - name: RESERVATION_FOLIO_DB_USERNAME
+          value: "here"
+        - name: RESERVATION_FOLIO_DB_PASSWORD
+          value: "here"
+        - name: RESERVATION_HISTORY_DB_USERNAME
+          value: "here"
+        - name: RESERVATION_HISTORY_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__InnCenter
+          value: "Application Name=steblynskyi.Folio.Api;data source=sql-inncenter.steblynskyi.com;User ID=$(INNCENTER_DB_USERNAME);Password=$(INNCENTER_DB_PASSWORD);Initial Catalog=here;TrustServerCertificate=Yes;"
+        - name: ConnectionStrings__Folio
+          value: "Application Name=steblynskyi.Folio.Api;Server=reservation-db.steblynskyi.com;User ID=$(RESERVATION_FOLIO_DB_USERNAME);Password=$(RESERVATION_FOLIO_DB_PASSWORD);Database=folio;"
+        - name: ConnectionStrings__Hangfire
+          value: "Application Name=steblynskyi.Folio.Api.Hangfire;Server=reservation-db.steblynskyi.com;User ID=$(RESERVATION_FOLIO_DB_USERNAME);Password=$(RESERVATION_FOLIO_DB_PASSWORD);Database=folio;"
+        - name: ConnectionStrings__History
+          value: "Application Name=steblynskyi.Folio.Api.History;Server=reservation-db.steblynskyi.com;User Id=$(RESERVATION_HISTORY_DB_USERNAME);Password=$(RESERVATION_HISTORY_DB_PASSWORD);Database=pms_history;"  

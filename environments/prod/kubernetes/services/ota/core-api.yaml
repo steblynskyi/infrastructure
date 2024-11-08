@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-api
+  labels:
+    app: core-api
+    env: prod
+  namespace: ota
+spec:
+  replicas: 4
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: core-api
+      labels:
+        app: core-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: core-api
+          image: steblynskyi-docker.jfrog.io/ota-core-api:fd81cf251
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 25m
+              memory: 100Mi
+            limits:
+              cpu: 200m
+              memory: 512Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          - name: INNCENTER_INNSYNC_DB_USERNAME
+            value: "here"
+          - name: INNCENTER_INNSYNC_DB_PASSWORD
+            value: "here"
+          - name: ConnectionStrings__innSyncDb
+            value: "Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_INNSYNC_DB_USERNAME);password=$(INNCENTER_INNSYNC_DB_PASSWORD);Database=innSyncDb;MultipleActiveResultSets=True;Application Name=ota-core-api;TrustServerCertificate=Yes;"
+          - name: EndPoints__EventNotificationWebhook
+            value: "https://steblynskyi.webhook.office.com/webhookb2/111"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: core-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: core-api
+  namespace: ota
+  labels:
+    Domain: ota-core-api.steblynskyi.com
+spec:
+  selector:
+    app: core-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: core-api
+  namespace: ota
+spec:
+  maxReplicas: 6
+  minReplicas: 4
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: core-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 480Mi

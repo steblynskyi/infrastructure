@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-query-api
+  labels:
+    app: payment-query-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: payment-query-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: payment-query-api
+      labels:
+        env: prod
+        app: payment-query-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: payment-query-api
+        image: steblynskyi-docker.jfrog.io/pms-payment-query-api:9603dc4
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 250m
+            memory: 512Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: AWS_ACCESS_KEY_ID
+          value: here
+        - name: AWS_SECRET_ACCESS_KEY
+          value: here
+        - name: AWS_REGION
+          value: us-east-1
+        - name: ConnectionStrings__InnCenterDb
+          value: "Application Name=pms.payment.query.api;data source=sql-inncenter.steblynskyi.com;User ID=here;Password=here;Initial Catalog=here;pooling=true;connection lifetime=120;max pool size=3000"
+        - name: Kms__KeyArn
+          value: "arn:aws:kms:us-east-1:123:key/111-222-333-444-555"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: payment-query-api
+  namespace: pms
+  labels:
+    Domain: pms-payment-query-api.steblynskyi.com
+spec:
+  selector:
+    app: payment-query-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payment-query-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payment-query-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 75
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 500Mi

@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policy-query-api
+  labels:
+    app: policy-query-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: policy-query-api
+      labels:
+        app: policy-query-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: policy-query-api
+          image: steblynskyi-docker.jfrog.io/pms-policy-query-api:f1e8b5c
+          imagePullPolicy: Always
+#          Uncomment this section if app has health check endpoint
+#          livenessProbe:
+#            failureThreshold: 3
+#            httpGet:
+#              port: http
+#              scheme: HTTP
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            successThreshold: 1
+#            timeoutSeconds: 5
+          resources:
+#            limits:
+#              cpu: 250m
+#              memory: 250Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: AppSettings__InnCenterDbConnectionString
+            value: Server=sql-inncenter.steblynskyi.com;Database=here;User Id=here; password=here;Application Name=pms-policy-query-api;
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: policy-query-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: policy-query-api
+  namespace: pms
+  labels:
+    Domain: pms-policy-query-api.steblynskyi.com
+spec:
+  selector:
+    app: policy-query-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: policy-query-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: policy-query-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

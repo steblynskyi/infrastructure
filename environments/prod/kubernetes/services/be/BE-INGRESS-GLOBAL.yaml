@@ -1,0 +1,68 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: be-ingress-global
+  namespace: be
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/tags: Environment=PROD,Name=BE-Ingress-Gloabal
+    alb.ingress.kubernetes.io/subnets: subnet-1,subnet-2,subnet-3
+    alb.ingress.kubernetes.io/security-groups: sg-1
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-555
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-1-2017-01
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80,"HTTPS":443}]'
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=false,access_logs.s3.bucket=steblynskyi-prod-kube-ingress-controller-logs,access_logs.s3.prefix=be,deletion_protection.enabled=true,routing.http2.enabled=true,idle_timeout.timeout_seconds=120
+spec:
+  rules:
+  - host: be-auth-openid-api.steblynskyi.com
+    http:
+      paths:
+      -  backend:
+           service:
+            name: auth-openid-api
+            port:
+             number: 80
+         path: /*
+         pathType: ImplementationSpecific
+  - host: be-auth-openid-api.steblynskyi.com
+    http:
+      paths:
+      -  backend:
+          service:
+            name: auth-openid-api
+            port:
+              number: 80
+         path: /*
+         pathType: ImplementationSpecific
+  - host: be-auth-jwt-api.steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: auth-jwt-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: be-auth-jwt-api.steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: auth-jwt-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific
+  - host: be-booking-engine-protected-api.steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: booking-engine-protected-api
+            port:
+              number: 80
+        path: /*
+        pathType: ImplementationSpecific

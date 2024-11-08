@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: toggle-api
+  labels:
+    app: toggle-api
+    env: prod
+  namespace: pc
+spec:
+  replicas: 5
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: toggle-api
+      labels:
+        app: toggle-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: toggle-api
+          image: steblynskyi-docker.jfrog.io/pc-toggle-api:a992908
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: 250m
+              memory: 450Mi
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_REGION
+            value: us-east-1
+          - name: AWS_SECRET_KEY
+            value: here
+          - name: DYNAMO_ROLE_TABLE
+            value: toggles-prod
+          - name: Settings__ClientApiBaseUrl
+            value: https://pms-client-api.steblynskyi.com/api/v1
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: toggle-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: toggle-api
+  namespace: pc
+  labels:
+    Domain: pc-toggle-api.steblynskyi.com
+spec:
+  selector:
+    app: toggle-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 5000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: toggle-api
+  namespace: pc
+spec:
+  maxReplicas: 7
+  minReplicas: 5
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: toggle-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 220m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 420Mi

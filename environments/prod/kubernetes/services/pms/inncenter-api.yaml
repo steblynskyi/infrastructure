@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inncenter-api
+  labels:
+    app: inncenter-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: inncenter-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: inncenter-api
+      labels:
+        app: inncenter-api
+        env: prod
+      annotations:
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: inncenter-api
+        image: steblynskyi-docker.jfrog.io/pms-inncenter-api:7b6c57c34
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 150m
+            memory: 450Mi
+          limits:
+            cpu: 700m
+            memory: 1200Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: TZ
+          value: America/New_York
+        - name: ConnectionStrings__DefaultConnection
+          value: "Application Name=steblynskyi.Pms.InnCenter.Api;data source=sql-inncenter.steblynskyi.com;User ID=here;Password=here;Initial Catalog=here;pooling=true;connection lifetime=120;max pool size=3000;MultipleActiveResultSets=True;TrustServerCertificate=Yes;"
+        - name: ConnectionStrings__SubmitPaymentConnection
+          value: "Application Name=steblynskyi.Pms.InnCenter.Api-Payments;data source=sql-inncenter.steblynskyi.com;User ID=here;Password=here;Initial Catalog=here;pooling=true;connection lifetime=120;max pool size=3000;TrustServerCertificate=Yes;"
+        - name: AWS_REGION
+          value: us-east-1
+        - name: AWS_ACCESS_KEY_ID
+          value: here
+        - name: AWS_SECRET_ACCESS_KEY
+          value: here
+        - name: Smtp__Username
+          value: here
+        - name: Smtp__Password
+          value: here
+        - name: IpRateLimiting__GeneralRules__3__Limit
+          value: "600"
+        - name: ClientRateLimiting__GeneralRules__3__Limit
+          value: "250"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: inncenter-api
+  namespace: pms
+  labels:
+    Domain: pms-inncenter-api.steblynskyi.com
+spec:
+  selector:
+    app: inncenter-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inncenter-api
+  namespace: pms
+spec:
+  maxReplicas: 18
+  minReplicas: 10
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inncenter-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 600m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 1100Mi

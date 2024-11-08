@@ -1,0 +1,82 @@
+{
+    "rollup": {
+        "enabled": true,
+        "schedule": {
+            "interval": {
+                "start_time": 1684531030249,
+                "period": 1,
+                "unit": "Days",
+                "schedule_delay": 0
+            }
+        },
+        "last_updated_time": 1684531030258,
+        "enabled_time": 1684531030249,
+        "description": "Rollup for pms-task-query-api",
+        "schema_version": 17,
+        "source_index": "pms-task-query-api",
+        "target_index": "rollup-pms-task-query-api",
+        "metadata_id": null,
+        "page_size": 1000,
+        "delay": 0,
+        "continuous": true,
+        "dimensions": [
+            {
+                "date_histogram": {
+                    "fixed_interval": "1h",
+                    "source_field": "@timestamp",
+                    "target_field": "@timestamp",
+                    "timezone": "US/Eastern"
+                }
+            },
+            {
+                "terms": {
+                    "source_field": "@timestamp",
+                    "target_field": "@timestamp"
+                }
+            },
+            {
+                "terms": {
+                    "source_field": "kubernetes.container_image.keyword",
+                    "target_field": "kubernetes.container_image.keyword"
+                }
+            },
+            {
+                "terms": {
+                    "source_field": "kubernetes.labels.app.keyword",
+                    "target_field": "kubernetes.labels.app.keyword"
+                }
+            },
+            {
+                "terms": {
+                    "source_field": "kubernetes.namespace_name.keyword",
+                    "target_field": "kubernetes.namespace_name.keyword"
+                }
+            },
+            {
+                "terms": {
+                    "source_field": "kubernetes.labels.env.keyword",
+                    "target_field": "kubernetes.labels.env.keyword"
+                }
+            },
+            {
+                "terms": {
+                    "source_field": "kubernetes.pod_name.keyword",
+                    "target_field": "kubernetes.pod_name.keyword"
+                }
+            },
+            {
+                "terms": {
+                    "source_field": "level.keyword",
+                    "target_field": "level.keyword"
+                }
+            },
+            {
+                "terms": {
+                    "source_field": "message.keyword",
+                    "target_field": "message.keyword"
+                }
+            }
+        ],
+        "metrics": []
+    }
+}

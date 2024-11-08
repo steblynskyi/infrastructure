@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inncenter-web
+  labels:
+    app: inncenter-web
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: inncenter-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: inncenter-web
+      labels:
+        app: inncenter-web
+        env: prod
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: inncenter-web
+        image: steblynskyi-docker.jfrog.io/pms-inncenter-web:b021117
+        imagePullPolicy: IfNotPresent
+        args:
+          - -base-path=/pms
+        resources:
+          requests:
+            cpu: 25m
+            memory: 50Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_INNCENTER_BASE_URL
+          value: "https://app.steblynskyi.com/"
+        - name: APP_PMS_INNCENTER_API
+          value: "https://pms-inncenter-api.steblynskyi.com/api/v1"
+        - name: APP_PMS_INNCENTER_API_V2
+          value: "https://pms-inncenter-api.steblynskyi.com/api/v2/"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: inncenter-web
+  namespace: pms
+  labels:
+    Domain: pms-inncenter-web.steblynskyi.com
+spec:
+  selector:
+    app: inncenter-web
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inncenter-web
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inncenter-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 120m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

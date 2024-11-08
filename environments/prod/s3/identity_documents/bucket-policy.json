@@ -1,0 +1,21 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AddCannedAcl",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "arn:aws:iam::123:user/store-steblynskyi-qa",
+                    "arn:aws:iam::123:user/pms-reservations-api-qa"
+                ]
+            },
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject"
+            ],
+            "Resource": "arn:aws:s3:::steblynskyi-prod-identity-documents/*"
+        }
+    ]
+}

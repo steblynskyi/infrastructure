@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pms-ingress-internal-grpc
+  namespace: pms
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/target-node-labels: kops.k8s.io/instancegroup=nodes
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/tags: Environment=PROD,Name=PMS-Ingress-Internal-Grpc
+    alb.ingress.kubernetes.io/subnets: subnet-1,subnet-2,subnet-3
+    alb.ingress.kubernetes.io/security-groups: sg-1
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123:certificate/111-222-333-444-555
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS-1-2-2017-01
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/load-balancer-attributes: access_logs.s3.enabled=false,access_logs.s3.bucket=steblynskyi-prod-kube-ingress-controller-logs,access_logs.s3.prefix=pms,deletion_protection.enabled=true,routing.http2.enabled=true,idle_timeout.timeout_seconds=120
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/backend-protocol-version: GRPC
+spec:
+  rules:
+  - host: pms-rate-engine-grpc-api.steblynskyi.com
+    http:
+      paths:
+      - backend:
+          service:
+            name: rate-engine-grpc-api
+            port:
+              number: 81
+        path: /*
+        pathType: ImplementationSpecific

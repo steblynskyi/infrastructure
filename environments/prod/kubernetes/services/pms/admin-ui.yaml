@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-ui
+  labels:
+    app: admin-ui
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: admin-ui
+      labels:
+        app: admin-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: admin-ui
+          image: steblynskyi-docker.jfrog.io/pms-admin-ui:b35ea90
+          imagePullPolicy: Always
+          args:
+            - -base-path=/admin
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 150m
+              memory: 256Mi
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+          - name: APP_INNCENTER_API_BASE_URL
+            value: https://app.steblynskyi.com/
+          - name: APP_JWT_AUTH_BASE_URL
+            value: https://be-auth-jwt-api.steblynskyi.com/api/v1
+          - name: APP_GOOGLE_ANALYTICS_ENABLED
+            value: "true"
+          - name: APP_PMS_INNCENTER_API
+            value: https://pms-inncenter-api.steblynskyi.com/api/v1
+          - name: APP_RESERVATION_API_BASE_URL
+            value: https://app.steblynskyi.com/reservations/api
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: admin-ui
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: admin-ui
+  namespace: pms
+  labels:
+    Domain: pms-admin-ui.steblynskyi.com
+spec:
+  selector:
+    app: admin-ui
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: admin-ui
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: admin-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 85
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

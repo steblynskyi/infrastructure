@@ -17,10 +17,3 @@ variable "environment" {
   description = "Environment name"
   default     = "QA"
 }
-
-# VPC ID for the EKS cluster
-variable "vpc_id" {
-  description = "QA-VPC"
-  type        = string
-  default     = "vpc-123"
-}

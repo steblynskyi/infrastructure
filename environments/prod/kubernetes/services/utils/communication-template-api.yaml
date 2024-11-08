@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: communication-template-api
+  labels:
+    app: communication-template-api
+    env: prod
+  namespace: utils
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: communication-template-api
+      labels:
+        app: communication-template-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: communication-template-api
+          image: steblynskyi-docker.jfrog.io/utils-communication-template-api:6f6f3cd
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 15m
+              memory: 50Mi
+            limits:
+              cpu: 200m
+              memory: 650Mi
+          ports:
+            - containerPort: 1337
+              name: http
+          env:
+          - name: sails_db__server
+            value: sql-inncenter.steblynskyi.com
+          - name: sails_db__dbName
+            value: here
+          - name: sails_db__user
+            value: here
+          - name: sails_db__pwd
+            value: here
+          - name: sails_urls__imagesRoot
+            value: \\\\fileserver-inncenter.steblynskyi.com\\Share1\\
+          - name: NODE_ENV
+            value: PROD
+          - name: sails_urls__remoteLockPrivateApi
+            value: https://pms-extensions-remotelock-internal-api.steblynskyi.com
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: communication-template-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: communication-template-api
+  namespace: utils
+  labels:
+    Domain: utils-communication-template-api.steblynskyi.com
+spec:
+  selector:
+    app: communication-template-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 1337
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: communication-template-api
+  namespace: utils
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: communication-template-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

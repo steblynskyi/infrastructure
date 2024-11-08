@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-sync-api
+  labels:
+    app: inventory-sync-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: inventory-sync-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: inventory-sync-api
+      labels:
+        env: prod
+        app: inventory-sync-api
+      annotations:
+        steblynskyi.io/inject-secret: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+        steblynskyi.io/scrape: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: inventory-sync-api
+        image: steblynskyi-docker.jfrog.io/pms-inventory-sync-api:83dbb9c5f
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 350m
+            memory: 1200Mi
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 9464
+          name: metrics
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: AWS_REGION
+          value: us-east-1
+        - name: AWS_ACCESS_KEY_ID
+          value: here
+        - name: AWS_SECRET_ACCESS_KEY
+          value: here
+        - name: MassTransit__PrefetchCount
+          value: "10"
+        - name: MassTransit__ConcurrentMessageLimit
+          value: "10"
+        - name: MassTransit__Queues__RatePlanFromV2ToV1__PrefetchCount
+          value: "8"
+        - name: MassTransit__Queues__RatePlanFromV2ToV1__ConcurrentMessageLimit
+          value: "8"
+        - name: EmailService__UserName
+          value: here
+        - name: EmailService__Password
+          value: here
+        - name: ReservationServiceClient__ApiKey
+          value: here
+        - name: INNCENTER_RATES_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_RATES_DB_PASSWORD
+          value: "here"
+        - name: INNSIGHTS_DB_USERNAME
+          value: "here"
+        - name: INNSIGHTS_DB_PASSWORD
+          value: "here"
+        - name: RESERVATION_RATEENGINE_DB_USERNAME
+          value: "here"
+        - name: RESERVATION_RATEENGINE_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__InnCenter
+          value: "Application Name=pms-inventory-sync-api;Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_RATES_DB_USERNAME);Password=$(INNCENTER_RATES_DB_PASSWORD);Initial Catalog=here;pooling=true;connection lifetime=180;Connect Timeout=60;max pool size=3000;TrustServerCertificate=true;"
+        - name: ConnectionStrings__RateEngine
+          value: "Application Name=pms-inventory-sync-api;User ID=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD);Server=reservation-db.steblynskyi.com;Database=rateengine;"
+        - name: ConnectionStrings__History
+          value: "Application Name=pms-inventory-sync-api;Server=reservation-db.steblynskyi.com;User Id=$(RESERVATION_RATEENGINE_DB_USERNAME);Password=$(RESERVATION_RATEENGINE_DB_PASSWORD);Database=rateengine;"
+        - name: ConnectionStrings__InnSights
+          value: "Application Name=pms-inventory-sync-api;Host=innsights-db.steblynskyi.com;Database=innSights;Username=$(INNSIGHTS_DB_USERNAME);Password=$(INNSIGHTS_DB_PASSWORD);"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /health/status
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: inventory-sync-api
+  namespace: pms
+  labels:
+    Domain: pms-inventory-sync-api.steblynskyi.com
+spec:
+  selector:
+    app: inventory-sync-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inventory-sync-api
+  namespace: pms
+spec:
+  maxReplicas: 6
+  minReplicas: 4
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inventory-sync-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 300m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 1100Mi

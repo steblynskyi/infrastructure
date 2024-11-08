@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: communication-email-ses
+  labels:
+    app: communication-email-ses
+    env: prod
+  namespace: utils
+spec:
+  replicas: 4
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: communication-email-ses
+      labels:
+        app: communication-email-ses
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: communication-email-ses
+          image: steblynskyi-docker.jfrog.io/utils-communication-email-ses:e98de5c
+          imagePullPolicy: Always
+#          Uncomment this section if app has health check endpoint
+#          livenessProbe:
+#            failureThreshold: 3
+#            httpGet:
+#              port: http
+#              scheme: HTTP
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            successThreshold: 1
+#            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 10m
+              memory: 50Mi
+            limits:
+              cpu: 100m
+              memory: 350Mi
+          ports:
+            - containerPort: 1337
+              name: http
+          env:
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_SECRET_ACCESS_KEY
+            value: here
+          - name: INN_LOG_FLUENT_HOST
+            value: utils-fluentd-logging.steblynskyi.com
+          - name: INN_LOG_LEVEL
+            value: 'info'
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: communication-email-ses
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: communication-email-ses
+  namespace: utils
+  labels:
+    Domain: utils-communication-email-ses.steblynskyi.com
+spec:
+  selector:
+    app: communication-email-ses
+  ports:
+    - port: 80
+      name: http
+      targetPort: 1337
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: communication-email-ses
+  namespace: utils
+spec:
+  maxReplicas: 6
+  minReplicas: 4
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: communication-email-ses
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

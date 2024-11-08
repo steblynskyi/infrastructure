@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: accounts-ui
+  labels:
+    app: accounts-ui
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: accounts-ui
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: accounts-ui
+      labels:
+        env: prod
+        app: accounts-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: accounts-ui
+        image: steblynskyi-docker.jfrog.io/pms-accounts-ui:3f152b51
+        imagePullPolicy: IfNotPresent
+        args:
+        - -base-path=/accounts
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_INNCENTER_API_BASE_URL
+          value: "https://app.steblynskyi.com"
+        - name: APP_JWT_AUTH_BASE_URL
+          value: "https://be-auth-jwt-api.steblynskyi.com/api/v1"
+        - name: APP_PMS_INNCENTER_API
+          value: "https://pms-inncenter-api.steblynskyi.com/api/v1"
+        - name: APP_AWS_S3_BASE_URL
+          value: "https://steblynskyi-prod-store-inncenter.s3.amazonaws.com"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: accounts-ui
+  namespace: pms
+spec:
+  selector:
+    app: accounts-ui
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: accounts-ui
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: accounts-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 120m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

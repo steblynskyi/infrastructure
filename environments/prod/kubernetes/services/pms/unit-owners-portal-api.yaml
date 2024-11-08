@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unit-owners-portal-api
+  labels:
+    app: unit-owners-portal-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: unit-owners-portal-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: unit-owners-portal-api
+      labels:
+        env: prod
+        app: unit-owners-portal-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: unit-owners-portal-api
+        image: steblynskyi-docker.jfrog.io/pms-unit-owners-portal-api:f6e6ab3
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: ConnectionStrings__UnitOwners
+          value: "Host=reservation-db.steblynskyi.com;Database=here;Username=here;Password=here;Pooling=true;MaxPoolSize=250;Connection Idle Lifetime=60;CommandTimeout=60;Application Name=steblynskyi.UnitOwners.Api;"
+        - name: ConnectionStrings__InnCenter
+          value: "Server=sql-inncenter.steblynskyi.com;Database=here;User Id=here; password=here;connection lifetime=180;Connect Timeout=60;TrustServerCertificate=Yes;Application Name=steblynskyi.UnitOwners.Api;"
+        - name: RedisCache__Enabled
+          value: "true"
+        - name: RedisCache__ConnectionString
+          value: redis.steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: unit-owners-portal-api
+  namespace: pms
+  labels:
+    Domain: pms-unit-owners-portal-api.steblynskyi.com
+spec:
+  selector:
+    app: unit-owners-portal-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: unit-owners-portal-api
+  namespace: pms
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: unit-owners-portal-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

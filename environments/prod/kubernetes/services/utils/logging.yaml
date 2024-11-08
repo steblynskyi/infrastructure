@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logging
+  labels:
+    app: logging
+    env: prod
+  namespace: utils
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: logging
+      labels:
+        app: logging
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: logging
+          image: steblynskyi-docker.jfrog.io/devops-logging:v1.1
+          imagePullPolicy: Always
+#          Uncomment this section if app has health check endpoint
+#          livenessProbe:
+#            failureThreshold: 3
+#            httpGet:
+#              port: http
+#              scheme: HTTP
+#            initialDelaySeconds: 20
+#            periodSeconds: 10
+#            successThreshold: 1
+#            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 250m
+              memory: 250Mi
+          ports:
+            - containerPort: 24224
+              name: http
+          env:
+          - name: INN_ELASTICSEARCH_ENDPOINT
+            value: https://search-logging-fluentd-prod.us-east-1.es.amazonaws.com
+          - name: INN_ELASTICSEARCH_REGION
+            value: us-east-1
+          - name: AWS_ACCESS_KEY_ID
+            value: here
+          - name: AWS_SECRET_ACCESS_KEY
+            value: here
+          - name: INN_ENVIRONMENT
+            value: Prod
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: logging
+---
+kind: Service
+apiVersion: v1
+metadata: 
+  name: logging
+  namespace: utils
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+spec:
+  selector: 
+    app: logging
+  ports: 
+  - port: 24224
+    name: logging
+    targetPort: 24224
+    protocol: TCP
+  type: LoadBalancer
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: logging
+  namespace: utils
+spec:
+  maxReplicas: 6
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: logging
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

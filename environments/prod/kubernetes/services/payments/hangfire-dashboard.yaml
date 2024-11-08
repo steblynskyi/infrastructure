@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hangfire-dashboard
+  labels:
+    app: hangfire-dashboard
+    env: prod
+  namespace: payments
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: hangfire-dashboard
+      labels:
+        app: hangfire-dashboard
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: hangfire-dashboard
+          image: steblynskyi-docker.jfrog.io/payments-hangfire-dashboard:58bb7d7f
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 150m
+              memory: 350Mi
+          ports:
+            - containerPort: 6001
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: ConnectionStrings__hangfireDb
+            value: Server=reservation-db.steblynskyi.com;User Id=here;Password=here;Database=payments
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: hangfire-dashboard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: hangfire-dashboard
+  namespace: payments
+  labels:
+    Domain: payments-hangfire-dashboard.steblynskyi.com
+spec:
+  selector:
+    app: hangfire-dashboard
+  ports:
+    - port: 80
+      name: http
+      targetPort: 6001
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hangfire-dashboard
+  namespace: payments
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hangfire-dashboard
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

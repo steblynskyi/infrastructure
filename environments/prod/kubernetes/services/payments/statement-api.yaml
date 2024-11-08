@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: statement-api
+  labels:
+    app: statement-api
+    env: prod
+  namespace: payments
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: statement-api
+      labels:
+        app: statement-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: statement-api
+          image: steblynskyi-docker.jfrog.io/payments-statement-api:58bb7d7f
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 250m
+              memory: 550Mi
+          ports:
+            - containerPort: 6001
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: statement-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: statement-api
+  namespace: payments
+  labels:
+    Domain: payments-statement-api.steblynskyi.com
+spec:
+  selector:
+    app: statement-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 6001
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: statement-api
+  namespace: payments
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: statement-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 230m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 500Mi

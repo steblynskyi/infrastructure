@@ -5,7 +5,7 @@ terraform {
 
   backend "s3" {
     bucket  = "steblynskyi-infra"
-    key     = "terraform/qa/ad/ad_connector.tfstate"
+    key     = "terraform/qa/acm/domain.tfstate"
     region  = "us-east-1"
     profile = "taras"
   }

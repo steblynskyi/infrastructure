@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booking-engine-checkin-web
+  labels:
+    app: booking-engine-checkin-web
+    env: prod
+  namespace: be
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: booking-engine-checkin-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: booking-engine-checkin-web
+      labels:
+        env: prod
+        app: booking-engine-checkin-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: booking-engine-checkin-web
+          image: steblynskyi-docker.jfrog.io/be-booking-engine-checkin-web:64568e1
+          imagePullPolicy: IfNotPresent
+          args:
+            - -base-path=/guestportal
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 150m
+              memory: 2560Mi
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_BOOKING_ENGINE_PUBLIC_API_URL
+              value: https://be-booking-engine-api.steblynskyi.com
+            - name: APP_BOOKING_ENGINE_PROTECTED_API_URL
+              value: https://be-booking-engine-protected-api.steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: booking-engine-checkin-web
+  namespace: be
+  labels:
+    Domain: be-booking-engine-checkin-web.steblynskyi.com
+spec:
+  selector:
+    app: booking-engine-checkin-web
+    env: prod
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: booking-engine-checkin-web
+  namespace: be
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: booking-engine-checkin-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 100m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

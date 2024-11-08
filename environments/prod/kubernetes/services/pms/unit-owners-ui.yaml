@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: unit-owners-ui
+  labels:
+    app: unit-owners-ui
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: unit-owners-ui
+      labels:
+        app: unit-owners-ui
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: unit-owners-ui
+          image: steblynskyi-docker.jfrog.io/pms-unit-owners-ui:9d3be537
+          imagePullPolicy: Always
+          args:
+          - -base-path=/unit-owners
+          resources:
+           requests:
+              cpu: 50m
+              memory: 64Mi
+           limits:
+              cpu: 350m
+              memory: 512Mi
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+          - name: APP_INNCENTER_API_BASE_URL
+            value: https://app.steblynskyi.com
+          - name: APP_JWT_AUTH_BASE_URL
+            value: https://be-auth-jwt-api.steblynskyi.com/api/v1
+          - name: APP_PMS_INNCENTER_API
+            value: https://pms-inncenter-api.steblynskyi.com/api/v1
+          - name: APP_AWS_S3_BASE_URL
+            value: "https://steblynskyi-prod-store-inncenter.s3.amazonaws.com"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: unit-owners-ui
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: unit-owners-ui
+  namespace: pms
+  labels:
+    Domain: pms-unit-owners-ui.steblynskyi.com
+spec:
+  selector:
+    app: unit-owners-ui
+  ports:
+    - port: 80
+      name: http
+      targetPort: 8080
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: unit-owners-ui
+  namespace: pms
+spec:
+  maxReplicas: 6
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: unit-owners-ui
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 480Mi

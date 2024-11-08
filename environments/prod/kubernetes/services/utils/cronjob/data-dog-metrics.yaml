@@ -1,0 +1,26 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: datadog-metrics
+  namespace: utils
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: datadog-metrics
+              image: steblynskyi-docker.jfrog.io/datadog-metrics:ebb31ba
+              env:
+                - name: MSSQL_SERVER
+                  value: sql-inncenter.steblynskyi.com
+                - name: MSSQL_PASSWORD
+                  value: here
+                - name: MSSQL_USER
+                  value: here
+                - name: DD_API_KEY
+                  value: here
+          restartPolicy: OnFailure
+          imagePullSecrets:
+            - name: steblynskyi

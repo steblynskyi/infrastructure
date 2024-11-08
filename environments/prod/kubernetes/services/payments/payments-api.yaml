@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-api
+  labels:
+    app: payments-api
+    env: prod
+  namespace: payments
+spec:
+  replicas: 5
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: payments-api
+      labels:
+        app: payments-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: payments-api
+          image: steblynskyi-docker.jfrog.io/payments-api:58bb7d7f
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 20m
+              memory: 150Mi
+            limits:
+              cpu: 200m
+              memory: 750Mi
+          ports:
+            - containerPort: 6000
+              name: http
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: payments-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: payments-api
+  namespace: payments
+  labels:
+    Domain: payments-api.steblynskyi.com
+spec:
+  selector:
+    app: payments-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 6000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: payments-api
+  namespace: payments
+spec:
+  maxReplicas: 8
+  minReplicas: 5
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: payments-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 180m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 350Mi

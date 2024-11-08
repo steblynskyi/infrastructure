@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: new-rates-api
+  labels:
+    app: new-rates-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: new-rates-api
+      labels:
+        app: new-rates-api
+        env: prod
+      annotations:
+        steblynskyi.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: new-rates-api
+          image: steblynskyi-docker.jfrog.io/pms-new-rates-api:83dbb9c5f
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 120Mi
+            limits:
+              cpu: 1000m
+              memory: 1000Mi
+          ports:
+            - containerPort: 80
+              name: http
+            - containerPort: 9464
+              name: metrics
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: INNCENTER_RATES_DB_USERNAME
+            value: "here"
+          - name: INNCENTER_RATES_DB_PASSWORD
+            value: "here"
+          - name: ConnectionStrings__InnCenter
+            value: "Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_RATES_DB_USERNAME); password=$(INNCENTER_RATES_DB_PASSWORD);Initial Catalog=here;pooling=true;connection lifetime=180;Connect Timeout=60;max pool size=3000; Application Name=steblynskyi.rates.api; TrustServerCertificate=true;"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: new-rates-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: new-rates-api
+  namespace: pms
+  labels:
+    Domain: pms-new-rates-api.steblynskyi.com
+spec:
+  selector:
+    app: new-rates-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: new-rates-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: new-rates-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageValue: 950m
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 450Mi

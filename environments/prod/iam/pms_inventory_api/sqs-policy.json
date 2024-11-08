@@ -1,0 +1,34 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "sqs:SetQueueAttributes",
+                "sqs:ReceiveMessage",
+                "sqs:DeleteMessage",
+                "sqs:SendMessage",
+                "sqs:GetQueueUrl",
+                "sqs:GetQueueAttributes",
+                "sqs:ChangeMessageVisibility",
+                "sqs:DeleteMessageBatch",
+                "sqs:SendMessageBatch",
+                "sqs:ChangeMessageVisibilityBatch"
+            ],
+            "Resource": [
+                "arn:aws:sqs:us-east-1:123:RATES-DerivedRatePlanFromParentV2-PROD.fifo",
+                "arn:aws:sqs:us-east-1:123:RATES-OverridesFromRateEngineToV2-PROD.fifo",
+                "arn:aws:sqs:us-east-1:123:RATES-ProductBundleFromV2ToRateEngine-PROD.fifo",
+                "arn:aws:sqs:us-east-1:123:RATES-RatePlanFromV2ToRateEngine-PROD.fifo",
+                "arn:aws:sqs:us-east-1:123:RATES-RatePlanFromV2ToV1-PROD.fifo",
+                "arn:aws:sqs:us-east-1:123:RATES-ReservationCreated-PROD.fifo",
+                "arn:aws:sqs:us-east-1:123:RATES-RatePlanV1Changed-PROD.fifo",
+                "arn:aws:sqs:us-east-1:123:RATES-RatePlanV2Changed-PROD.fifo",
+                "arn:aws:sqs:us-east-1:123:RATES-OverrideRateEngineChanged-PROD.fifo",
+                "arn:aws:sqs:us-east-1:123:RATES-RatePlanRateEngineChanged-PROD.fifo",
+                "arn:aws:sqs:us-east-1:123:RATES-OtaNotification-PROD.fifo"
+            ]
+        }
+    ]
+}

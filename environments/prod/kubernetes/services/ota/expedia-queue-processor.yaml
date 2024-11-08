@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: expedia-queue-processor
+  labels:
+    app: expedia-queue-processor
+    env: prod
+  namespace: ota
+spec:
+  replicas: 2
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: expedia-queue-processor
+      labels:
+        app: expedia-queue-processor
+      annotations:
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "9464"
+        steblynskyi.io/scrape: "true"
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: expedia-queue-processor
+          image: steblynskyi-docker.jfrog.io/ota-expedia-queue-processor:fd81cf251
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 120Mi
+            limits:
+              cpu: 150m
+              memory: 350Mi
+          ports:
+            - containerPort: 5000
+              name: http
+            - containerPort: 9464
+              name: metrics
+          env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          - name: "ConnectionStrings__innSyncDb"
+            value: "Server=sql-inncenter.steblynskyi.com;User Id=here;password=here;Database=innSyncDb;MultipleActiveResultSets=True;Application Name=ota-expedia-queue-processor;TrustServerCertificate=Yes;"
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: expedia-queue-processor
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: expedia-queue-processor
+  labels:
+    app: expedia-queue-processor
+    env: prod
+  namespace: ota
+spec:
+  maxReplicas: 4
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: expedia-queue-processor
+  metrics:
+    - type: Pods
+      pods:
+        metric:
+          name: xpdia_average_request_process_time
+        target:
+          type: AverageValue
+          averageValue: "60"

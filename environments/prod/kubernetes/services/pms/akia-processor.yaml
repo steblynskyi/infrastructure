@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: akia-processor
+  labels:
+    app: akia-processor
+    env: prod
+  namespace: pms
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: akia-processor
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: akia-processor
+      labels:
+        env: prod
+        app: akia-processor
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: akia-processor
+        image: steblynskyi-docker.jfrog.io/pms-akia-processor:2049242
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: INNCENTER_AKIA_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_AKIA_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__Akia
+          value: "Application Name=pms-akia-processor;Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_AKIA_DB_USERNAME);password=$(INNCENTER_AKIA_DB_PASSWORD);Database=Akia;MultipleActiveResultSets=True;TrustServerCertificate=Yes"

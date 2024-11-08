@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: google-booking-links-public-api
+  labels:
+    app: google-booking-links-public-api
+    env: prod
+  namespace: integrations
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: google-booking-links-public-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: google-booking-links-public-api
+      labels:
+        env: prod
+        app: google-booking-links-public-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: google-booking-links-public-api
+        image: steblynskyi-docker.jfrog.io/integrations-google-booking-links-public-api:4d0a6edd
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: "Production"
+        - name: INNCENTER_GBL_DB_USERNAME
+          value: "gbl_app"
+        - name: INNCENTER_GBL_DB_PASSWORD
+          value: "here"
+        - name: ConnectionStrings__GblDb
+          value: "Application Name=integrations-google-booking-links-public-api;Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_GBL_DB_USERNAME);password=$(INNCENTER_GBL_DB_PASSWORD);Database=GBL;MultipleActiveResultSets=True;TrustServerCertificate=Yes;"
+        - name: BasicAuthentication__Username
+          value: "here"
+        - name: BasicAuthentication__Password
+          value: "here"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: google-booking-links-public-api
+  namespace: integrations
+  labels:
+    Domain: integrations-google-booking-links-public-api.steblynskyi.com
+spec:
+  selector:
+    app: google-booking-links-public-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: google-booking-links-public-api
+  namespace: integrations
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: google-booking-links-public-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

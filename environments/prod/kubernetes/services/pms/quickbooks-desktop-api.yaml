@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: quickbooks-desktop-api
+  labels:
+    app: quickbooks-desktop-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: quickbooks-desktop-api
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: quickbooks-desktop-api
+      labels:
+        env: prod
+        app: quickbooks-desktop-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: quickbooks-desktop-api
+        image: steblynskyi-docker.jfrog.io/pms-quickbooks-desktop-api:9d5097a
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: ASPNETCORE_ENVIRONMENT
+          value: Production
+        - name: AWSSettings__QuickBooksBucketName
+          value: steblynskyi-prod-pms-quickbooks
+        - name: INNCENTER_DB_USERNAME
+          value: "here"
+        - name: INNCENTER_DB_PASSWORD
+          value: "here"
+        - name: "ConnectionStrings__QuickBooksDb"
+          value: "Application Name=steblynskyi.Pms.QuickBooks.Api;Server=sql-inncenter.steblynskyi.com;User Id=$(INNCENTER_DB_USERNAME);password=$(INNCENTER_DB_PASSWORD);Database=QuickBooks;MultipleActiveResultSets=True;"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: quickbooks-desktop-api
+  namespace: pms
+  labels:
+    Domain: pms-quickbooks-desktop-api.steblynskyi.com
+spec:
+  selector:
+    app: quickbooks-desktop-api
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 80
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: quickbooks-desktop-api
+  namespace: pms
+spec:
+  maxReplicas: 3
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: quickbooks-desktop-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 220Mi

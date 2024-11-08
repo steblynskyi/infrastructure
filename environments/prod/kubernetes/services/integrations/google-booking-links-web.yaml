@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: google-booking-links-web
+  labels:
+    app: google-booking-links-web
+    env: prod
+  namespace: integrations
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: google-booking-links-web
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: google-booking-links-web
+      labels:
+        env: prod
+        app: google-booking-links-web
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: google-booking-links-web
+        image: steblynskyi-docker.jfrog.io/integrations-google-booking-links-web:61dc5b4
+        imagePullPolicy: Always
+        args:
+        - -base-path=/setup/google-booking-links/
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 150m
+            memory: 256Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: APP_INNCENTER_API_BASE_URL
+          value: https://app.steblynskyi.com
+        - name: APP_PMS_INNCENTER_API_URL
+          value: https://pms-inncenter-api.steblynskyi.com/api/v1
+        - name: APP_AUTH_JWT_API_BASE_URL
+          value: https://be-auth-jwt-api.steblynskyi.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: google-booking-links-web
+  namespace: integrations
+  labels:
+    Domain: integrations-google-booking-links-web.steblynskyi.com
+spec:
+  selector:
+    app: google-booking-links-web
+    env: prod
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: google-booking-links-web
+  namespace: integrations
+spec:
+  maxReplicas: 5
+  minReplicas: 2
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: google-booking-links-web
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 250Mi

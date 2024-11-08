@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guest-web-api
+  labels:
+    app: guest-web-api
+    env: prod
+  namespace: pms
+spec:
+  replicas: 3
+  revisionHistoryLimit: 3
+  template:
+    metadata:
+      name: guest-web-api
+      labels:
+        app: guest-web-api
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: guest-web-api
+          image: steblynskyi-docker.jfrog.io/pms-guest-web-api:9e60549
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+          - name: INN_RESERVATION_API_URL
+            value: https://pms-reservation-query-api.steblynskyi.com/api/v1
+          - name: INN_ACCOUNT_API_URL
+            value: https://pms-account-query-api.steblynskyi.com/api/v1
+          - name: INN_PROPERTY_API_URL
+            value: https://pms-property-api.steblynskyi.com/api/v2
+          - name: INN_CLIENT_API_URL
+            value: https://pms-client-api.steblynskyi.com/api/v1
+          - name: TASK_CATEGORY_API_URL
+            value: https://pms-task-category-api.steblynskyi.com
+          - name: TASK_COMMAND_API_URL
+            value: https://pms-task-command-api.steblynskyi.com
+          - name: TASK_QUERY_API_URL
+            value: https://pms-task-query-api.steblynskyi.com
+          - name: TASK_PROPERTY_API_URL
+            value: https://pms-task-property-api.steblynskyi.com
+          - name: GUEST_SERVICE_NAVIGATION_API_URL
+            value: https://pms-guest-navigation-api.steblynskyi.com
+          - name: INN_AVAILABILITY_API_URL
+            value: https://pms-inventory-availability-api.steblynskyi.com/api/v1
+          - name: HOUSEKEEPING_API_URL
+            value: https://pms-housekeeping-room-api.steblynskyi.com
+      restartPolicy: Always
+  selector:
+    matchLabels:
+      app: guest-web-api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: guest-web-api
+  namespace: pms
+  labels:
+    Domain: pms-guest-web-api.steblynskyi.com
+spec:
+  selector:
+    app: guest-web-api
+  ports:
+    - port: 80
+      name: http
+      targetPort: 3000
+      protocol: TCP
+  type: NodePort
+---
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: guest-web-api
+  namespace: pms
+spec:
+  maxReplicas: 5
+  minReplicas: 3
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: guest-web-api
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageValue: 300Mi
