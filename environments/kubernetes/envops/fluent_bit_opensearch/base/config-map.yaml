@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit
+  labels:
+    app: fluent-bit
+data:
+  custom_parsers.conf: |
+    [PARSER]
+      Name        docker
+      Format      json
+      Time_Keep   Off
+      Time_Key    time
+      Time_Format %Y-%m-%dT%H:%M:%S.%L
+  fluent-bit.conf: |
+    [SERVICE]
+      Daemon       Off
+      Flush        1
+      Log_Level    debug
+      Parsers_File custom_parsers.conf
+      HTTP_Server  On
+      HTTP_Listen  0.0.0.0
+      HTTP_Port    2020
+      Health_Check On
+    [INPUT]
+      Name             tail
+      Path             /var/log/containers/*.log
+      Exclude_Path     /var/log/containers/*fluent-bit*.log,/var/log/containers/*_kube-system_*.log,/var/log/containers/*kafka-ui*.log
+      Tag              kube.*
+      Parser           docker
+      Docker_Mode      On
+      Mem_Buf_Limit    5MB
+      Skip_Long_Lines  On
+      Refresh_Interval 10
+    [FILTER]
+      Name                kubernetes
+      Match               kube.*
+      Merge_Log           On
+      K8S-Logging.Parser  On
+      K8S-Logging.Exclude Off
+      Buffer_Size         0
+      Use_Kubelet         On
+      Kubelet_Port        10250
+      tls.verify          off
+    [FILTER]
+      Name       record_modifier
+      Match      kube.*
+      Remove_key log
+      Remove_key stream
+    [FILTER]
+      Name   lua
+      Match  kube.*
+      Call   remove_field
+      Code   function remove_field(tag, timestamp, record) record['kubernetes']['container_hash'] = nil record['kubernetes']['docker_id'] = nil record['kubernetes']['labels']['pod-template-hash'] = nil record['kubernetes']['pod_id'] = nil record['kubernetes']['annotations']['kubernetes.io/config.source'] = nil record['kubernetes']['annotations']['kubernetes.io/config.seen'] = nil return 1, timestamp, record end
+    [FILTER]
+      Name   lua
+      Match  kube.*
+      Call   filter_app
+      Code   function filter_app(tag, timestamp, record) if record['kubernetes']['annotations'] and record['kubernetes']['annotations']['fluentbit-logger'] == "true" then return 0, timestamp, record else return -1, timestamp, record end end
+    [FILTER]
+      Name    lua
+      Match   kube.*
+      Call    index_name
+      Code    function index_name(tag, timestamp, record) local kubernetes = record['kubernetes'] local namespace = kubernetes['namespace_name'] local app = kubernetes['labels']['app'] local index = namespace .. "-" .. app record['index'] = index return 1, timestamp, record end
+    [OUTPUT]
+      Name               opensearch
+      Match              kube.*
+      Host               ${OPENSEARCH_HOST}
+      Port               ${OPENSEARCH_PORT}
+      AWS_Auth           On
+      AWS_Region         us-east-1
+      Generate_ID        On
+      Replace_Dots       On
+      tls                On
+      Include_Tag_Key    true
+      Suppress_Type_Name On
+      Index              $index
+Transform: AWS::Serverless-2016-10-31

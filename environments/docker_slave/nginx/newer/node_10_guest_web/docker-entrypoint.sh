@@ -1,0 +1,29 @@
+#!/bin/bash
+set -e
+if [ -z $SKIP ]; then
+
+    if [ -z $PICKUPDIR ]; then
+      PICKUPDIR="dist/*"
+    else 
+      PICKUPDIR="$PICKUPDIR/*"
+    fi
+
+    if [ -z $TARGETDIR ]; then
+      TARGETDIR="/var/www/html/"
+    else
+      TARGETDIR="/var/www/html/$TARGETDIR/"
+    fi
+
+  mkdir -p $TARGETDIR
+  cp -r $PICKUPDIR $TARGETDIR
+
+  source src/environments/default.env
+
+    if [[ ! -z "${NODE_ENV}" ]]; then
+      source src/environments/${NODE_ENV}.env
+    fi
+
+  envsubst < src/assets/js/env.js > ${TARGETDIR}/assets/js/env.js
+
+fi
+exec "$@"

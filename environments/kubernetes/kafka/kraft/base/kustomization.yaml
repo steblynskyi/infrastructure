@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kafka
+labels:
+- includeSelectors: true
+  pairs:
+    app: kraft
+configMapGenerator:
+  - name: kraft-scripts
+    files:
+      - "setup.sh"
+  - name: kraft-jmx-configuration
+    files:
+      - "kraft-jmx-configuration.yaml"
+resources:
+- statefulset.yaml
+- service.yaml
+- pod-disruption.yaml

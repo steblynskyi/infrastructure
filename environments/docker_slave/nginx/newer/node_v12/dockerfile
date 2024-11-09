@@ -1,0 +1,20 @@
+FROM steblynskyi-docker.jfrog.io/utils-jenkins-slave:base-2019
+
+RUN apt install apt-transport-https dirmngr gnupg ca-certificates
+#Installing dependency 
+RUN  apt-get update \
+     && apt-get install -y wget gnupg ca-certificates
+
+#Node Repo
+RUN curl -sL https://deb.nodesource.com/setup_12.x | sudo bash -
+RUN apt-get update
+RUN apt-get install -y npm
+RUN apt-get install -y nodejs
+RUN npm install -g npm@latest
+RUN npm install -g yarn --force
+
+# Install Java 11
+RUN apt-get remove openjdk* -y
+RUN echo 'deb http://ftp.debian.org/debian stretch-backports main' | sudo tee /etc/apt/sources.list.d/stretch-backports.list
+RUN apt-get update
+RUN apt install openjdk-11-jdk -y --allow-unauthenticated

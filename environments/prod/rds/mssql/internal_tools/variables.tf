@@ -113,5 +113,5 @@ variable "backup_retention_period" {
 
 variable "db_snapshot" {
   description = "DB snapshot identifier to restore from"
-  default     = "arn:aws:rds:us-east-1:960031658638:snapshot:internal-tools-qa-for-production"
+  default     = "arn:aws:rds:us-east-1:123:snapshot:internal-tools-qa-for-production"
 }

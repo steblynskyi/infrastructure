@@ -1,0 +1,45 @@
+FROM steblynskyi-docker.jfrog.io/utils-jenkins-slave:base-2019
+
+RUN apt install apt-transport-https dirmngr gnupg ca-certificates
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+RUN echo "deb https://download.mono-project.com/repo/debian stable-stretch main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
+RUN apt-get update
+
+#Installing dependency 
+RUN  apt-get update \
+     && apt-get install -y wget gnupg ca-certificates \
+     && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+     && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+     && apt-get update \
+     # We install Chrome to get all the OS level dependencies, but Chrome itself
+     # is not actually used as it's packaged in the node puppeteer library.
+     # Alternatively, we could could include the entire dep list ourselves
+     # (https://github.com/puppeteer/puppeteer/blob/master/docs/troubleshooting.md#chrome-headless-doesnt-launch-on-unix)
+     # but that seems too easy to get out of date.
+     && apt-get install -y google-chrome-stable \
+     && rm -rf /var/lib/apt/lists/* \
+     && wget --quiet https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh -O /usr/sbin/wait-for-it.sh \
+     && chmod +x /usr/sbin/wait-for-it.sh
+
+#Node Repo
+RUN curl -sL https://deb.nodesource.com/setup_14.x | sudo bash -
+RUN apt-get update \
+    && apt-get install -y npm \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest \
+    && pip install --upgrade pip
+
+#Eslint Repo
+RUN npm install linter
+
+# Installing Kubectl
+RUN curl -LO https://dl.k8s.io/release/v1.22.0/bin/linux/amd64/kubectl
+RUN chmod +x kubectl
+RUN mv kubectl /usr/local/bin/kubectl
+
+# Install Java 11
+RUN apt-get remove openjdk* -y
+RUN echo 'deb http://ftp.debian.org/debian stretch-backports main' | tee /etc/apt/sources.list.d/stretch-backports.list
+RUN add-apt-repository ppa:openjdk-r/ppa
+RUN apt-get update
+RUN apt install openjdk-11-jdk -y --allow-unauthenticated

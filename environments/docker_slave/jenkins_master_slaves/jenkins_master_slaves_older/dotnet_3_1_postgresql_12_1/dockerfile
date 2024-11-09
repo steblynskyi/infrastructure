@@ -1,0 +1,39 @@
+FROM steblynskyi-docker.jfrog.io/utils-jenkins-slave:base-2019
+
+# Kubernetes Repo
+RUN curl -LO https://dl.k8s.io/release/v1.19.0/bin/linux/amd64/kubectl
+RUN chmod +x kubectl
+RUN mv kubectl /usr/local/bin/kubectl
+
+# DotNet 3.1 Repo
+RUN apt-get install -y wget
+RUN wget https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
+RUN dpkg -i packages-microsoft-prod.deb
+
+RUN apt-get update; \
+    apt-get install -y apt-transport-https && \
+    apt-get update && \
+    apt-get install -y dotnet-sdk-3.1
+
+# Postgresql 12.2 Repo
+ENV POSTGRES_HOST=localhost
+ENV POSTGRES_BASE=postgres
+ENV POSTGRES_PASSWORD=postgres
+ENV POSTGRES_USER=postgres
+
+ENV TZ=America/New_York
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
+RUN apt-get update \
+    && apt-get -y install postgresql-12 postgresql-client-12 && update-rc.d postgresql enable
+USER postgres
+RUN /etc/init.d/postgresql start \
+    && psql --command "ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';" \
+    && psql --command "\q"
+USER  root
+RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/12/main/pg_hba.conf
+RUN echo "listen_addresses='*'" >> /etc/postgresql/12/main/postgresql.conf
+VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
+USER postgres
+CMD ["/usr/lib/postgresql/12/bin/postgres", "-D", "/var/lib/postgresql/12/main", "-c", "config_file=/etc/postgresql/12/main/postgresql.conf"]

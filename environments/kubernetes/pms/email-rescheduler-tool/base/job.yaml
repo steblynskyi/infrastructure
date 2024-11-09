@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: email-rescheduler-tool
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+      - name: email-rescheduler-tool
+        image: steblynskyi-docker.jfrog.io/pms-email-rescheduler-tool:4940fcb
+        imagePullPolicy: IfNotPresent
+        args: ["3690"]
+        ports:
+        - containerPort: 80
+        env:
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+      restartPolicy: Never

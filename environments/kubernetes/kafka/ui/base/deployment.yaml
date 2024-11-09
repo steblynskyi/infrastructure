@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-ui
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: kafka-ui
+  revisionHistoryLimit: 1
+  template:
+    metadata:
+      name: kafka-ui
+    spec:
+      containers:
+      - name: kafka-ui
+        image: tchiotludo/akhq:0.23.0
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 25m
+            memory: 32Mi
+          limits:
+            cpu: 250m
+            memory: 512Mi
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+          - name: AKHQ_CONFIGURATION
+            value: |
+                micronaut:
+                  security:
+                    enabled: true
+                akhq:
+                  connections:
+                    kafka-server:
+                      properties:
+                        bootstrap.servers: "kafka:9092"
+                      connect:
+                        - name: "connect"
+                          url: "http://debezium-connect:80"
+                    kraft-server:
+                      properties:
+                        bootstrap.servers: "kraft:9092"
+                      connect:
+                        - name: "connect"
+                          url: "http://connect:80"
+                  security:
+                    default-group: reader
+                    basic-auth:
+                      - username: admin
+                        password: "here"
+                        groups:
+                        - admin
+                      - username: steblynskyi
+                        password: "here"
+                        groups:
+                        - reader

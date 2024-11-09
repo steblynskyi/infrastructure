@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../base
+
+labels:
+- includeSelectors: true
+  pairs:
+    env: qa
+
+patches:
+- target:
+    kind: Job
+    name: email-rescheduler-tool
+    version: batch/v1
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+         name: EndPoints__EmailTriggerCreationUrl
+         value: "https://app.qa-steblynskyi.com/steblynskyiServices/ScheduleEmailTriggerCreator/Create"
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+         name: ConnectionStrings__InnCenter
+         value: "Application Name=steblynskyi.Reservations.BackgroundJob;Server=sql-inncenter.qa-steblynskyi.com;Database=here;User Id=here; password=here; TrustServerCertificate=Yes;"

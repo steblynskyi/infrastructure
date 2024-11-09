@@ -1,0 +1,14 @@
+FROM steblynskyi-docker.jfrog.io/utils-jenkins-slave:base-2019
+
+RUN apt install apt-transport-https dirmngr gnupg ca-certificates
+RUN apt-get update
+RUN apt-get install -y curl
+
+RUN wget -q https://dl.google.com/go/go1.16.3.linux-amd64.tar.gz
+RUN tar -xvf go1.16.3.linux-amd64.tar.gz -C /usr/local
+RUN cp -a /usr/local/go/bin/go /usr/local/bin/go
+RUN chmod +x /usr/local/bin/go
+
+RUN curl -LO https://dl.k8s.io/release/v1.19.0/bin/linux/amd64/kubectl
+RUN chmod +x kubectl
+RUN mv kubectl /usr/local/bin/kubectl

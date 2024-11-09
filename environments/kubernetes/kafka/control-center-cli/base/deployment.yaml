@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: control-center-cli
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: control-center-cli
+  template:
+    metadata:
+      name: control-center-cli
+    spec:
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: control-center-cli
+          image: steblynskyi-docker.jfrog.io/kakfa-control-center:v2
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 50m
+              memory: 100Mi

@@ -1,0 +1,33 @@
+# kafka headless service : Used for internal borker communciation
+apiVersion: v1
+kind: Service
+metadata:
+  name: kraft-headless
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: tcp-client
+      port: 9093
+      protocol: TCP
+      targetPort: kraft-controler
+    - name: tcp-internal
+      port: 9092
+      protocol: TCP
+      targetPort: kraft-internal
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kraft
+spec:
+  type: ClusterIP
+  ports:
+    - name: tcp-client
+      port: 9093
+      protocol: TCP
+      targetPort: kraft-controler
+    - name: tcp-internal
+      port: 9092
+      protocol: TCP
+      targetPort: kraft-internal

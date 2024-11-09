@@ -1,0 +1,106 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connect
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: connect
+  template:
+    metadata:
+      name: connect
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - connect
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        fsGroup: 1001
+      containers:
+        - name: connect
+          image: debezium/connect:2.2
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+          ports:
+          - name: connect
+            containerPort: 8083
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 2000Mi
+          env:
+          - name: GROUP_ID
+            value: "1"
+          - name: BOOTSTRAP_SERVERS
+            value: "kraft:9092"
+          - name: CONFIG_STORAGE_TOPIC
+            value: "debezium_connectors"
+          - name: OFFSET_STORAGE_TOPIC
+            value: "debezium_connectors_offsets"
+          - name: STATUS_STORAGE_TOPIC
+            value: "debezium_connectors_statuses"
+          - name: CONNECT_CONFIG_PROVIDERS
+            value: "file"
+          - name: CONNECT_CONFIG_PROVIDERS_FILE_CLASS
+            value: "org.apache.kafka.common.config.provider.FileConfigProvider"
+          - name: CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR
+            value: "3"
+          - name: CONNECT_STATUS_STORAGE_REPLICATION_FACTOR
+            value: "3"
+          - name: CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR
+            value: "3"
+          - name: CONNECT_ERRORS_RETRY_TIMEOUT
+            value: "-1"
+          - name: CONNECT_ERRORS_LOG_ENABLE
+            value: "true"
+          - name: CONNECT_ERRORS_LOG_INCLUDE_MESSAGES
+            value: "true"
+          - name: JMX_PORT
+            value: "5555"
+          volumeMounts:
+          - name: db-credentials
+            mountPath: "/secrets/db-credentials/"
+            readOnly: true
+        - name: jmx-exporter
+          image: docker.io/bitnami/jmx-exporter:0.18.0
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+          command:
+            - java
+          args:
+            - -jar
+            - jmx_prometheus_httpserver.jar
+            - "5556"
+            - /etc/jmx-connect/connect-jmx-configuration.yaml
+          env:
+            - name: JMXPORT
+              value: "5556"
+          ports:
+            - name: metrics
+              containerPort: 5556
+          resources:
+            limits: {}
+            requests: {}
+          volumeMounts:
+            - name: connect-jmx-configuration
+              mountPath: /etc/jmx-connect
+      volumes:
+        - name: db-credentials
+          secret:
+            secretName: db-credentials
+        - name: connect-jmx-configuration
+          configMap:
+            name: connect-jmx-configuration

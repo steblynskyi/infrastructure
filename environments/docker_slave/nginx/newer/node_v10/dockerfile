@@ -1,0 +1,19 @@
+FROM steblynskyi-docker.jfrog.io/utils-jenkins-slave:base-2019
+
+RUN apt install apt-transport-https dirmngr gnupg ca-certificates
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+RUN echo "deb https://download.mono-project.com/repo/debian stable-stretch main" | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
+RUN apt-get update
+
+#Node Repo
+RUN curl -sL https://deb.nodesource.com/setup_10.x | sudo bash -
+RUN apt-get update \
+    && apt-get install -y npm \
+    && apt-get install -y nodejs \
+    && npm install -g npm@latest \
+    && pip install --upgrade pip
+
+#Installing Kubectl
+RUN curl -LO https://dl.k8s.io/release/v1.20.0/bin/linux/amd64/kubectl
+RUN chmod +x kubectl
+RUN mv kubectl /usr/local/bin/kubectl

@@ -1,0 +1,176 @@
+# Kafka stateful
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kraft
+spec:
+  replicas: 3
+  serviceName: kraft-headless
+  selector:
+    matchLabels:
+      app: kraft
+  template:
+    metadata:
+      name: kraft
+      annotations:
+        "cluster-autoscaler.kubernetes.io/safe-to-evict": "false"
+    spec:
+      hostNetwork: false
+      hostIPC: false
+      priorityClassName: system-cluster-critical
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - kraft
+              topologyKey: kubernetes.io/hostname
+      securityContext:
+        fsGroup: 1001
+      imagePullSecrets:
+        - name: steblynskyi
+      containers:
+        - name: kraft
+          image: docker.io/bitnami/kafka:3.4
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 9999
+              scheme: HTTP
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 30
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+          command:
+            - /scripts/setup.sh
+          ports:
+            - name: kraft-controler
+              containerPort: 9093
+            - name: kraft-internal
+              containerPort: 9092
+            - name: kraft-external
+              containerPort: 9094
+          resources:
+            limits: {}
+            requests:
+              cpu: 50m
+              memory: 250Mi
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: KAFKA_EXTERNAL_DOMAIN
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['domain']
+            - name: KAFKA_ENABLE_KRAFT
+              value: "yes"
+            - name: KAFKA_CFG_PROCESS_ROLES
+              value: "broker,controller"
+            - name: KAFKA_CFG_LISTENERS
+              value: "CONTROLLER://:9093,PLAINTEXT://:9092,EXTERNAL://:9094"
+            - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+              value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+            - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
+              value: "CONTROLLER"
+            - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
+              value: "PLAINTEXT"
+            - name: KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE
+              value: "true"
+            - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
+              value: "0@kraft-0.kraft-headless.kafka.svc.cluster.local:9093,1@kraft-1.kraft-headless.kafka.svc.cluster.local:9093,2@kraft-2.kraft-headless.kafka.svc.cluster.local:9093,3@kraft-3.kraft-headless.kafka.svc.cluster.local:9093,4@kraft-4.kraft-headless.kafka.svc.cluster.local:9093"
+            - name: ALLOW_PLAINTEXT_LISTENER
+              value: "yes"
+            - name: KAFKA_VOLUME_DIR
+              value: "/bitnami/kafka"
+            - name: KAFKA_LOG_DIR
+              value: "/opt/bitnami/kafka/logs"
+            - name: KAFKA_CFG_DELETE_TOPIC_ENABLE
+              value: "true"
+            - name: JMX_PORT
+              value: "5555"
+          volumeMounts:
+            - name: data
+              mountPath: /bitnami/kafka
+            - name: logs
+              mountPath: /opt/bitnami/kafka/logs
+            - name: scripts
+              mountPath: /scripts/setup.sh
+              subPath: setup.sh
+        - name: jmx-exporter
+          image: docker.io/bitnami/jmx-exporter:0.18.0
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+          command:
+            - java
+          args:
+            - -jar
+            - jmx_prometheus_httpserver.jar
+            - "5556"
+            - /etc/jmx-kafka/kraft-jmx-configuration.yaml
+          ports:
+            - name: metrics
+              containerPort: 5556
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 150m
+              memory: 256Mi
+          volumeMounts:
+            - name: kraft-jmx-configuration
+              mountPath: /etc/jmx-kafka
+        - name: kafka-health-check
+          image: steblynskyi-docker.jfrog.io/kafka-broker-health-check:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: health
+              containerPort: 9999
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 150m
+              memory: 256Mi
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: KAFKA_BROKER
+            value: "localhost:9092"
+          - name: HEALTHCHECK_TOPIC_NAME
+            value: "kafka_healthchecks"
+          - name: LOG_LEVEL
+            value: INFO
+      volumes:
+        - name: logs
+          emptyDir: {}
+        - name: kraft-jmx-configuration
+          configMap:
+            name: kraft-jmx-configuration
+        - name: scripts
+          configMap:
+            name: kraft-scripts
+            defaultMode: 0755
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: 50Gi

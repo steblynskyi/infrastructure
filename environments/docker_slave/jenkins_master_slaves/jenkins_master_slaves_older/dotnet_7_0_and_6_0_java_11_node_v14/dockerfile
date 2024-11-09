@@ -1,0 +1,45 @@
+FROM steblynskyi-docker.jfrog.io/jenkins-master-slaves:base-latest
+
+RUN apt-get update
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+RUN apt install -y apt-transport-https dirmngr gnupg ca-certificates
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys A6A19B38D3D831EF
+
+RUN echo "deb https://download.mono-project.com/repo/debian stable-stretch main" | tee /etc/apt/sources.list.d/mono-official-stable.list
+RUN apt-get update
+
+RUN apt-get install -y curl
+RUN apt-get install -y gettext
+RUN apt-get install -y nuget
+
+# Install Dotnet SDK
+RUN wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.asc.gpg
+RUN mv microsoft.asc.gpg /etc/apt/trusted.gpg.d/
+RUN wget -q https://packages.microsoft.com/config/debian/9/prod.list
+RUN mv prod.list /etc/apt/sources.list.d/microsoft-prod.list
+RUN chown root:root /etc/apt/trusted.gpg.d/microsoft.asc.gpg
+RUN chown root:root /etc/apt/sources.list.d/microsoft-prod.list
+
+RUN apt-get update
+RUN wget https://download.visualstudio.microsoft.com/download/pr/253e5af8-41aa-48c6-86f1-39a51b44afdc/5bb2cb9380c5b1a7f0153e0a2775727b/dotnet-sdk-7.0.100-linux-x64.tar.gz \
+    && mkdir -p $HOME/dotnet \
+    && tar zxf dotnet-sdk-7.0.100-linux-x64.tar.gz -C $HOME/dotnet \
+    && ln -s $HOME/dotnet/* /usr/share/dotnet/
+RUN apt-get -y install dotnet-sdk-6.0
+
+# Install Kubectl
+RUN curl -LO https://dl.k8s.io/release/v1.22.4/bin/linux/amd64/kubectl
+RUN chmod +x kubectl
+RUN mv kubectl /usr/local/bin/kubectl
+RUN curl -o /usr/lib/nuget/NuGet.exe https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+
+# Install Java 11
+RUN apt-get remove openjdk* -y
+RUN echo 'deb http://ftp.debian.org/debian stretch-backports main' | tee /etc/apt/sources.list.d/stretch-backports.list
+RUN apt-get update
+RUN apt install openjdk-11-jdk -y --allow-unauthenticated
+
+# Install Node 14 Repo
+RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
+RUN apt-get update
+RUN apt-get install -y nodejs

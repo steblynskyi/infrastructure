@@ -1,0 +1,14 @@
+FROM steblynskyi-docker.jfrog.io/jenkins-master-slaves:base-latest 
+
+RUN apt-get update
+# Replace Shell With Bash So We Can Source Files
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+
+#Node Repo
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash -
+RUN apt-get update \
+    && apt-get install -y nodejs \
+    && npm install -g yarn --force \
+    && npm install -g babel-cli
+
+RUN yarn set version berry

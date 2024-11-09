@@ -1,0 +1,19 @@
+FROM steblynskyi-docker.jfrog.io/utils-jenkins-slave:base-2019
+
+RUN apt install apt-transport-https dirmngr gnupg ca-certificates
+#Installing dependency 
+RUN  apt-get update \
+     && apt-get install -y wget gnupg ca-certificates
+
+#Node Repo
+RUN curl -sL https://deb.nodesource.com/setup_14.x | sudo bash -
+RUN apt-get update
+RUN apt-get install -y npm
+RUN apt-get install -y nodejs
+RUN npm install -g npm@latest
+RUN apt-get install php -y
+
+#Eslint Repo
+RUN npm install linter
+# Install php composer
+RUN php -r "readfile('http://getcomposer.org/installer');" | php -- --install-dir=/usr/bin/ --filename=composer

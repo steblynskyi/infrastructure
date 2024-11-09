@@ -1,0 +1,49 @@
+FROM steblynskyi-docker.jfrog.io/jenkins-master-slaves:base-latest-v3
+
+# Install dependencies for pyenv and Python
+RUN apt-get update && \
+    apt-get install -y \
+        build-essential \
+        libssl-dev \
+        zlib1g-dev \
+        libbz2-dev \
+        libreadline-dev \
+        libsqlite3-dev \
+        wget \
+        curl \
+        llvm \
+        libncurses5-dev \
+        libncursesw5-dev \
+        xz-utils \
+        tk-dev \
+        libffi-dev \
+        liblzma-dev \
+        make
+
+# Install pyenv
+RUN curl https://pyenv.run | bash
+
+# Add pyenv to the PATH and enable shims
+ENV PYENV_ROOT="/root/.pyenv"
+ENV PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
+
+# Install All Python versions
+ENV PYTHON_VERSIONS="3.5.10 3.6.15 3.7.16 3.8.16 3.9.16 3.10.10"
+
+RUN for version in $PYTHON_VERSIONS; do \
+        pyenv install ${version}; \
+    done
+
+# Set the global Python version
+# NOTE: Set required Python Version for application in Application Dockerfile, like below:
+# export PYENV_VERSION=3.7.16
+RUN pyenv global 3.6.15
+
+RUN apt-get install -y python3-pip postgresql-server-dev-all
+
+# Install pip packages for each Python version
+RUN for version in $PYTHON_VERSIONS; do \
+        pyenv global ${version} && \
+        pip install --upgrade pip && \
+        pip install tox wheel uwsgi; \
+    done

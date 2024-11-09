@@ -1,0 +1,18 @@
+FROM python:3.5-alpine
+
+RUN apk --update add bash
+RUN apk update
+RUN apk --update add gcc make g++ zlib-dev musl-dev alpine-sdk linux-headers python3-dev postgresql-dev
+
+RUN pip install -U pip
+RUN pip install setuptools
+RUN pip install uwsgi
+
+RUN apk add libpq
+RUN apk add --no-cache uwsgi-python3
+RUN apk add --no-cache libffi-dev
+RUN apk add --no-cache openssl-dev
+
+ENV PATH=/usr/lib/postgresql/X.Y/bin/:$PATH
+
+RUN pip install psycopg2

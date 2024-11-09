@@ -1,0 +1,54 @@
+FROM steblynskyi-docker.jfrog.io/utils-jenkins-slave:base-2019
+
+RUN apt install apt-transport-https dirmngr gnupg ca-certificates
+RUN apt-get update
+
+RUN apt-get install -y curl
+RUN apt-get install -y gettext
+RUN apt-get install -y nuget
+
+
+RUN wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.asc.gpg
+RUN mv microsoft.asc.gpg /etc/apt/trusted.gpg.d/
+RUN wget -q https://packages.microsoft.com/config/debian/9/prod.list
+RUN mv prod.list /etc/apt/sources.list.d/microsoft-prod.list
+RUN chown root:root /etc/apt/trusted.gpg.d/microsoft.asc.gpg
+RUN chown root:root /etc/apt/sources.list.d/microsoft-prod.list
+
+RUN apt-get update
+RUN apt-get -y install dotnet-sdk-6.0
+RUN apt-get -y install dotnet-sdk-5.0
+
+
+RUN curl -LO https://dl.k8s.io/release/v1.19.0/bin/linux/amd64/kubectl
+RUN chmod +x kubectl
+RUN mv kubectl /usr/local/bin/kubectl
+
+RUN curl -o /usr/lib/nuget/NuGet.exe https://dist.nuget.org/win-x86-commandline/latest/nuget.exe
+
+# Postgresql 12.6 Repo
+ENV POSTGRES_HOST=localhost
+ENV POSTGRES_BASE=postgres
+ENV POSTGRES_PASSWORD=postgres
+ENV POSTGRES_USER=postgres
+
+ENV TZ=America/New_York
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt/ `lsb_release -cs`-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
+RUN wget --no-check-certificate --quiet -O - http://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+
+RUN apt-get update \
+    && apt-get -y install postgresql-12 postgresql-client-12 && update-rc.d postgresql enable
+
+USER postgres
+RUN /etc/init.d/postgresql start \
+    && psql --command "ALTER USER postgres WITH SUPERUSER PASSWORD 'postgres';" \
+    && psql --command "\q"
+
+USER  root
+RUN echo "host all  all    0.0.0.0/0  md5" >> /etc/postgresql/12/main/pg_hba.conf
+RUN echo "listen_addresses='*'" >> /etc/postgresql/12/main/postgresql.conf
+VOLUME  ["/etc/postgresql", "/var/log/postgresql", "/var/lib/postgresql"]
+USER postgres
+CMD ["/usr/lib/postgresql/12/bin/postgres", "-D", "/var/lib/postgresql/12/main", "-c", "config_file=/etc/postgresql/12/main/postgresql.conf"]

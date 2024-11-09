@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+- target-group-binding.yaml
+labels:
+- includeSelectors: true
+  pairs:
+    env: prod
+    domain: kafka-proxy.prodsteblynskyi.com
+replicas:
+  - name: kraft
+    count: 5
+patches:
+- target:
+    name: kraft
+    kind: StatefulSet
+    group: apps
+    version: v1
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+         name: KAFKA_KRAFT_CLUSTER_ID
+         value: "MN8b6XtvRtmm0E1-Leth3w"
+    - op: add
+      path: /spec/template/spec/containers/0/env/-
+      value:
+         name: KAFKA_CFG_LOG_RETENTION_HOURS
+         value: "120"
+    - op: add
+      path: /spec/template/spec/containers/0/resources/limits/cpu
+      value: 2500m
+    - op: add
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: 3500Mi
+    - op: add
+      path: /spec/volumeClaimTemplates/0/spec/resources/requests/storage
+      value: 300Gi

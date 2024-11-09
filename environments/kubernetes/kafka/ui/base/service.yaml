@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/success-codes: 200-499
+  name: kafka-ui
+spec:
+  ports:
+  - port: 80
+    name: http
+    targetPort: 8080
+    protocol: TCP
+  type: NodePort

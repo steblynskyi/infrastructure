@@ -1,0 +1,31 @@
+FROM jenkins/inbound-agent
+
+#Kubernetes Repo
+RUN apt-get update && sudo apt-get install -y apt-transport-https gnupg2
+RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
+RUN echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
+RUN apt-get update
+RUN apt-get install -y kubectl
+
+#Docker Repo
+RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common
+RUN curl -fsSL https://download.docker.com/linux/$(. /etc/os-release; echo "$ID")/gpg | apt-key add -
+RUN add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") $(lsb_release -cs) stable"
+
+#Yarn Repo
+RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+
+#Node Repo
+RUN curl -sL https://deb.nodesource.com/setup_8.x | bash -
+
+RUN apt-get update && apt-get install -y npm && apt-get install -y nodejs yarn docker-ce python make gcc python-pip zip unzip libssl-dev libffi-dev python-dev
+RUN update-rc.d docker enable
+RUN npm install -g npm@latest
+
+RUN pip install --upgrade pip
+RUN pip install awscli --ignore-installed six
+
+COPY bootstrup.sh /usr/local/bin/bootstrup.sh
+
+ENTRYPOINT ["/usr/local/bin/bootstrup.sh"]

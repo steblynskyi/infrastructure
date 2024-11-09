@@ -1,0 +1,98 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app.kubernetes.io/name: kube-prometheus
+    app.kubernetes.io/part-of: kube-prometheus
+    prometheus: k8s
+    role: alert-rules
+  name: kubernetes-prometheus-alerts
+  namespace: envops
+spec:
+  groups:
+  - name: kubernetes-apps
+    rules:
+    - alert: KubePodCrashLooping
+      annotations:
+        description: 'Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container
+          }}) is in waiting state (reason: "CrashLoopBackOff").'
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodcrashlooping
+        summary: Pod is crash looping.
+      expr: |
+        max_over_time(kube_pod_container_status_waiting_reason{reason="CrashLoopBackOff", job="kube-state-metrics"}[5m]) >= 1
+      for: 15m
+      labels:
+        severity: warning
+    - alert: KubePodNotReady
+      annotations:
+        description: Pod {{ $labels.namespace }}/{{ $labels.pod }} has been in a non-ready
+          state for longer than 15 minutes.
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubepodnotready
+        summary: Pod has been in a non-ready state for more than 15 minutes.
+      expr: |
+        sum by (namespace, pod, cluster) (
+          max by(namespace, pod, cluster) (
+            kube_pod_status_phase{job="kube-state-metrics", phase=~"Pending|Unknown"}
+          ) * on(namespace, pod, cluster) group_left(owner_kind) topk by(namespace, pod, cluster) (
+            1, max by(namespace, pod, owner_kind, cluster) (kube_pod_owner{owner_kind!="Job"})
+          )
+        ) > 0
+      for: 15m
+      labels:
+        severity: warning
+  - name: kubernetes-system-apiserver
+    rules:
+    - alert: KubeClientCertificateExpiration
+      annotations:
+        description: A client certificate used to authenticate to kubernetes apiserver
+          is expiring in less than 7.0 days.
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubeclientcertificateexpiration
+        summary: Client certificate is about to expire.
+      expr: |
+        apiserver_client_certificate_expiration_seconds_count{job="apiserver"} > 0 and on(job) histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="apiserver"}[5m]))) < 604800
+      labels:
+        severity: warning
+    - alert: KubeClientCertificateExpiration
+      annotations:
+        description: A client certificate used to authenticate to kubernetes apiserver
+          is expiring in less than 24.0 hours.
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubeclientcertificateexpiration
+        summary: Client certificate is about to expire.
+      expr: |
+        apiserver_client_certificate_expiration_seconds_count{job="apiserver"} > 0 and on(job) histogram_quantile(0.01, sum by (job, le) (rate(apiserver_client_certificate_expiration_seconds_bucket{job="apiserver"}[5m]))) < 86400
+      labels:
+        severity: critical
+    - alert: KubeAPIDown
+      annotations:
+        description: KubeAPI has disappeared from Prometheus target discovery.
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubeapidown
+        summary: Target disappeared from Prometheus target discovery.
+      expr: |
+        absent(up{job="apiserver"} == 1)
+      for: 15m
+      labels:
+        severity: critical
+    - alert: KubeAPITerminatedRequests
+      annotations:
+        description: The kubernetes apiserver has terminated {{ $value | humanizePercentage
+          }} of its incoming requests.
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubeapiterminatedrequests
+        summary: The kubernetes apiserver has terminated {{ $value | humanizePercentage
+          }} of its incoming requests.
+      expr: |
+        sum(rate(apiserver_request_terminations_total{job="apiserver"}[10m]))  / (  sum(rate(apiserver_request_total{job="apiserver"}[10m])) + sum(rate(apiserver_request_terminations_total{job="apiserver"}[10m])) ) > 0.20
+      for: 5m
+      labels:
+        severity: warning
+  - name: kubernetes-system-kubelet
+    rules:
+    - alert: KubeNodeNotReady
+      annotations:
+        description: '{{ $labels.node }} has been unready for more than 15 minutes.'
+        runbook_url: https://runbooks.prometheus-operator.dev/runbooks/kubernetes/kubenodenotready
+        summary: Node is not ready.
+      expr: |
+        kube_node_status_condition{job="kube-state-metrics",condition="Ready",status="true"} == 0
+      for: 15m
+      labels:
+        severity: warning

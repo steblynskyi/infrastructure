@@ -1,0 +1,15 @@
+FROM steblynskyi-docker.jfrog.io/jenkins-slave:dotnet-core1.14
+
+RUN apt-get update \
+    && apt-get install -y libunwind-dev \
+    && apt-get install -y icu-devtools \
+    && apt install apt-transport-https dirmngr gnupg ca-certificates \
+    && npm install -g newman
+
+RUN wget https://download.microsoft.com/download/A/F/6/AF610E6A-1D2D-47D8-80B8-F178951A0C72/Binaries/dotnet-dev-debian-x64.1.0.0-preview2-1-003177.tar.gz \
+    && mkdir /usr/share/dotnet \
+    && mkdir -p $HOME/dotnet \
+    && tar zxf dotnet-dev-debian-x64.1.0.0-preview2-1-003177.tar.gz -C $HOME/dotnet \
+    && ln -s $HOME/dotnet/* /usr/share/dotnet/
+
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/share/dotnet

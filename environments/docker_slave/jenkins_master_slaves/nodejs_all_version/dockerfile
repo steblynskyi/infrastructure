@@ -1,0 +1,17 @@
+FROM steblynskyi-docker.jfrog.io/jenkins-master-slaves:base-latest-v3
+
+# Replace Shell With Bash So We Can Source Files
+RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+
+# Install NVM -> https://www.howtoforge.com/how-to-install-and-use-nvm-on-debian-11/
+RUN apt-get update \
+    && apt-get install curl gnupg2 -y \
+    && curl https://raw.githubusercontent.com/creationix/nvm/master/install.sh | bash
+
+# Install Dependency
+RUN apt-get update \
+    && curl -sL https://deb.nodesource.com/setup_18.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g yarn --force \
+    && npm install -g babel-cli \
+    && yarn set version berry

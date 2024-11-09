@@ -1,0 +1,64 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: kraft-0-external
+  namespace: kafka
+  labels:
+    app: kraft
+spec:
+  serviceRef:
+    name: kraft-0-external
+    port: 19094
+  targetGroupARN: "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/kraft-0-external-PROD/1b5cb230726c2295"
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: kraft-1-external
+  namespace: kafka
+  labels:
+    app: kraft
+spec:
+  serviceRef:
+    name: kraft-1-external
+    port: 19095
+  targetGroupARN: "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/kraft-1-external-PROD/d30117205f909b01"
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: kraft-2-external
+  namespace: kafka
+  labels:
+    app: kraft
+spec:
+  serviceRef:
+    name: kraft-2-external
+    port: 19096
+  targetGroupARN: "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/kraft-2-external-PROD/0f3fc45c4cb08cb7"
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: kraft-3-external
+  namespace: kafka
+  labels:
+    app: kraft
+spec:
+  serviceRef:
+    name: kraft-3-external
+    port: 19097
+  targetGroupARN: "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/kraft-3-external-PROD/f2de356805a7de4d"
+---
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: kraft-4-external
+  namespace: kafka
+  labels:
+    app: kraft
+spec:
+  serviceRef:
+    name: kraft-4-external
+    port: 19098
+  targetGroupARN: "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/kraft-4-external-PROD/ddbe053acb5593df"

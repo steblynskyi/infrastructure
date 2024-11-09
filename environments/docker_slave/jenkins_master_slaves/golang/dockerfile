@@ -1,0 +1,9 @@
+FROM steblynskyi-docker.jfrog.io/jenkins-master-slaves:base-latest-v3
+
+# Install go1.19 -> https://go.dev/dl/
+RUN wget -q https://go.dev/dl/go1.19.3.linux-amd64.tar.gz
+RUN tar -xvf go1.19.3.linux-amd64.tar.gz -C /usr/local
+RUN cp -a /usr/local/go/bin/go /usr/local/bin/go
+RUN chmod +x /usr/local/bin/go
+
+RUN apt-get -y install make

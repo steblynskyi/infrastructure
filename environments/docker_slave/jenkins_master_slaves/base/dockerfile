@@ -1,0 +1,59 @@
+FROM openjdk:11-jre
+
+# Install Kubectl -> https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/
+ENV KUBE_VER v1.23.14
+RUN curl -LO https://dl.k8s.io/release/$KUBE_VER/bin/linux/amd64/kubectl
+RUN chmod +x kubectl
+RUN mv kubectl /usr/local/bin/kubectl
+
+# Install AWS CLI -> https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN ./aws/install
+
+# Cleanup after AWS CLI Setup
+RUN rm -rf awscliv2.zip \
+  aws
+
+# Install Docker -> https://docs.docker.com/engine/install/debian/
+RUN apt-get update && apt-get install -y \
+  ca-certificates \
+  curl \
+  gnupg \
+  lsb-release
+
+RUN curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+RUN echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
+  $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+RUN apt-get update && apt-get install -y \
+  docker-ce \
+  docker-ce-cli \
+  containerd.io
+
+RUN update-rc.d docker enable
+
+# Install BuildKit
+RUN wget https://github.com/moby/buildkit/releases/download/v0.11.5/buildkit-v0.11.5.linux-amd64.tar.gz
+RUN tar xvf buildkit-v0.11.5.linux-amd64.tar.gz -C /usr/local
+
+# ENV HOME /home/jenkins
+ARG USER=jenkins
+RUN useradd -c "Jenkins user" -d /home/jenkins -m ${USER}
+RUN gpasswd -a ${USER} docker
+RUN gpasswd -a ${USER} daemon
+RUN gpasswd -A ${USER} root
+
+# Download Jenkins Remoting Version
+ENV JENKINS_REMOTING_VERSION 4.13
+RUN curl --create-dirs -sSLo /usr/share/jenkins/remoting-$JENKINS_REMOTING_VERSION.jar http://repo.jenkins-ci.org/public/org/jenkins-ci/main/remoting/$JENKINS_REMOTING_VERSION/remoting-$JENKINS_REMOTING_VERSION.jar
+RUN chmod 755 /usr/share/jenkins
+
+# Copying Jenkins Slave Shell Script
+COPY jenkins-slave.sh /usr/local/bin/jenkins-slave.sh
+RUN chmod +x /usr/local/bin/jenkins-slave.sh
+
+VOLUME /home/${USER}
+
+ENTRYPOINT ["/usr/local/bin/jenkins-slave.sh"]

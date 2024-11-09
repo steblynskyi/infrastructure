@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+labels:
+- includeSelectors: true
+  pairs:
+    env: dev
+secretGenerator:
+  - name: db-credentials
+    namespace: kafka
+    behavior: replace
+    files:
+      - "secrets/folio-db.yaml"
+      - "secrets/guestprofile-db.yaml"
+      - "secrets/guestservices-db.yaml"
+      - "secrets/inncenter-db.yaml"
+      - "secrets/reservation-db.yaml"
+patches:
+- target:
+    name: connect
+    kind: Service
+    version: v1
+  patch: |-
+    - op: add
+      path: /metadata/labels/Domain
+      value: kafka-connect.dev-steblynskyi.com
+- target:
+    name: connect
+    kind: Deployment
+    version: v1
+  patch: |-
+    - op: add
+      path: /spec/template/spec/containers/0/resources/limits/memory
+      value: 3000Mi
