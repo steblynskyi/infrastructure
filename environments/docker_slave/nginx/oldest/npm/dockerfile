@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y curl
 RUN curl -sL https://deb.nodesource.com/setup_6.x | bash -
 RUN apt-get update && apt-get install -y nodejs node-gyp && npm install npm@latest @angular/cli@latest webpack -g
 
-RUN  curl -u ir.jfrog@steblynskyi.com:AKCp5bBCkmjvj29qNyCdG2p7mqZEoDjsN78EfiFqRbP9J556fMvp875BQJP6QMWH8CeVmbyy8  https://steblynskyi.jfrog.io/steblynskyi/api/npm/auth > ~/.npmrc
+RUN  curl -u steblynskyi.jfrog@steblynskyi.com:here  https://steblynskyi.jfrog.io/steblynskyi/api/npm/auth > ~/.npmrc
 
 # forward request and error logs to docker log collectori
 RUN ln -sf /dev/stdout /var/log/nginx/access.log \
